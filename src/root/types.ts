@@ -1,8 +1,10 @@
 import * as PIXI from "pixi.js";
+import { Howl } from "howler";
 
 interface IGame {
   app: PIXI.Application;
   atlas: PIXI.Spritesheet;
+  sound: Record<string, Howl>;
   screens: IGameScreen[];
   curScreen: IGameScreen | null;
 
@@ -25,6 +27,7 @@ interface IGameScreen {
 type TButtonWithShadow = {
   container: PIXI.Container;
   button: PIXI.Sprite;
+  state: { disabled: boolean };
 };
 
 export type {

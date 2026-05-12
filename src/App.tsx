@@ -3,7 +3,7 @@ import { Application, useApplication } from '@pixi/react';
 import * as WebFont from "webfontloader";
 import Game from "./root/game.ts";
 // import ReactOverlay from "./ReactOverlay";
-import { G_Fonts } from "./root/constants.ts";
+import { G_BaseSize, G_Fonts } from "./root/constants.ts";
 import styles from './styles.module.scss';
 
 
@@ -29,7 +29,7 @@ const App = () => {
       {/* Pixi Canvas */}
       <div className={styles.pixiCanvasContainer}>
         {fontsLoaded &&
-          <Application background={'#10280C'} resizeTo={undefined} width={1672} height={941}>
+          <Application background={'#10280C'} resizeTo={undefined} width={G_BaseSize.Width} height={G_BaseSize.Height}>
             <GameInstance />
           </Application>
         }

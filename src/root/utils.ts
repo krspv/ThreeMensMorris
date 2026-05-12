@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 import { DropShadowFilter } from 'pixi-filters';
-import {G_Fonts} from "./constants.ts";
+import { G_Fonts } from "./constants.ts";
 import {TButtonWithShadow} from "./types.ts";
 
 
@@ -14,7 +14,10 @@ class Utils {
 
   static clamp = (val: number, min: number, max: number): number => Math.max(min, Math.min(max, val));
 
-  static createButton = (tex: PIXI.Texture, label: string = '', fontSize: number = 64): TButtonWithShadow => {
+  static createButton = (tex: PIXI.Texture, { label = '', fontSize = 64 }: {
+    label?: string;
+    fontSize?: number;
+  } = {}): TButtonWithShadow => {
     const btnContainer = new PIXI.Container();
 
     const buttonSprite = new PIXI.Sprite(tex);
@@ -45,12 +48,15 @@ class Utils {
       text.position.set(buttonSprite.width * 0.5, buttonSprite.height * 0.5);
     }
 
+    const state = { disabled: false };
     const onDown = () => {
+      if (state.disabled) return;
       buttonSprite.position.set(10, 10);
       if (text) text.position.set(buttonSprite.width * 0.5 + 10, buttonSprite.height * 0.5 + 10);
       buttonSprite.filters = [];
     };
     const onUp = () => {
+      if (state.disabled) return;
       buttonSprite.position.set(0, 0);
       if (text) text.position.set(buttonSprite.width * 0.5, buttonSprite.height * 0.5);
       buttonSprite.filters = filters;
@@ -63,7 +69,7 @@ class Utils {
     buttonSprite.on('mouseupoutside', onUp);
     buttonSprite.on('touchendoutside', onUp);
 
-    return { container: btnContainer, button: buttonSprite };
+    return { container: btnContainer, button: buttonSprite, state };
   };
 }
 
