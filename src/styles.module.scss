@@ -1,0 +1,27 @@
+
+.main {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(#2B572B, #092B02);
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.pixiCanvasContainer {
+  aspect-ratio: 1672/941;
+  background: gray;
+  width: min(100%, 1672px, calc((100vh - 80px) * 1672/941));
+  position: relative;
+
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+}

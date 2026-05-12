@@ -1,0 +1,32 @@
+body {
+    margin: 0;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #000000;
+}
+
+#app {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@font-face {
+    font-family: 'Astro Space';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/AstroSpace-0Wl3o.otf') format('opentype'),
+    url('fonts/AstroSpace-eZ2Bg.ttf') format('truetype'),
+    local('Astro Space');
+}
+
+@font-face {
+    font-family: 'Gradzy';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/Gradzy-3lx13.otf') format('opentype'),
+    local('Gradzy');
+}

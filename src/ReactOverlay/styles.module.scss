@@ -1,0 +1,23 @@
+.topmost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+
+  .menuButton {
+    pointer-events: auto;
+    font-family: 'Astro Space', sans-serif;
+    font-size: 72px;
+    padding: 20px 50px;
+    cursor: pointer;
+    border-radius: 10px;
+  }
+
+  .scoreTxt {
+    font-family: 'Gradzy', serif;
+    font-size: 64px;
+    // letter-spacing: .075em;
+    color: white;
+  }
+}
