@@ -102,12 +102,13 @@ class ScrLoader implements IGameScreen {
     stage.addChild(this.txt1);
     stage.addChild(this.progressBar);
 
-    PIXI.Assets.add({ alias: G_Tex.Atlas, src: 'images/atlas.json'});
-    PIXI.Assets.add({ alias: G_Sound.BkMusic01, src: 'sound/bk-music-01.aac'});
-    PIXI.Assets.add({ alias: G_Sound.BkMusic02, src: 'sound/bk-music-02.aac'});
-    PIXI.Assets.add({ alias: G_Sound.ButtonClick, src: 'sound/button-click.aac'});
+    PIXI.Assets.add({ alias: G_Tex.Atlas, src: 'images/atlas.json' });
+    PIXI.Assets.add({ alias: G_Tex.Dialog, src: 'images/dialog.png' });
+    PIXI.Assets.add({ alias: G_Sound.BkMusic01, src: 'sound/bk-music-01.aac' });
+    PIXI.Assets.add({ alias: G_Sound.BkMusic02, src: 'sound/bk-music-02.aac' });
+    PIXI.Assets.add({ alias: G_Sound.ButtonClick, src: 'sound/button-click.aac' });
 
-    const allAliases = [G_Tex.Atlas, G_Sound.BkMusic01, G_Sound.BkMusic02, G_Sound.ButtonClick];
+    const allAliases = [G_Tex.Atlas, G_Tex.Dialog, G_Sound.BkMusic01, G_Sound.BkMusic02, G_Sound.ButtonClick];
     PIXI.Assets.load(allAliases, this.onProgress);
   };
 
@@ -115,6 +116,7 @@ class ScrLoader implements IGameScreen {
     if (this.loadState === 1) {
       // Initialize the game object with all of the loaded data
       this.game.atlas = PIXI.Assets.get(G_Tex.Atlas) as PIXI.Spritesheet;
+      this.game.textures[G_Tex.Dialog] = PIXI.Assets.get(G_Tex.Dialog) as PIXI.Texture;
 
       this.game.screens.push(new ScrHome(this.game));
       this.game.screens.push(new ScrGame(this.game));

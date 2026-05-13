@@ -9,6 +9,7 @@ import { G_Screens } from "./constants.ts";
 class Game implements IGame {
   app: PIXI.Application;
   atlas!: PIXI.Spritesheet;
+  textures: PIXI.Texture[] = [];
   sound: Record<string, Howl> = {};
   screens!: IGameScreen[];
   curScreen: IGameScreen | null = null;

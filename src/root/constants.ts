@@ -17,13 +17,14 @@ export const G_Screens = {
 export const G_Tex = {
   Atlas: 'Atlas',
   Background: 'background.png',
-  BlueChip: 'blue-chip.png',
-  RedChip: 'red-chip.png',
+  PlayerPiece: 'player-piece.png',
+  CpuPiece: 'cpu-piece.png',
   Pirate: 'pirate.png',
   Button: 'button.png',
   Music: 'music.png',
   Close: 'close.png',
   Miniature: 'miniature.png',
+  Dialog: 'dialog.png',
 } as const;
 
 export const G_Sound = {

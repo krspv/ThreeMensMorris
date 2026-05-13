@@ -4,6 +4,7 @@ import { Howl } from "howler";
 interface IGame {
   app: PIXI.Application;
   atlas: PIXI.Spritesheet;
+  textures: Record<string, PIXI.Texture>;
   sound: Record<string, Howl>;
   screens: IGameScreen[];
   curScreen: IGameScreen | null;

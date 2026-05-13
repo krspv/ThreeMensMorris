@@ -5,7 +5,9 @@ import {G_Description, G_Fonts, G_Sound, G_Tex} from "../constants.ts";
 import Utils from "../utils.ts";
 
 
-type TState = 'ShowingUp' | 'Regular' | 'TransitionToRules' | 'Rules' | 'TransitionFromRules';
+type TState = 'ShowingUp' | 'Regular' | 'TransitionToRules' | 'Rules' | 'TransitionFromRules'
+  | 'TransitionToDifficultyDialog' | 'DifficultyDialog' | 'CancellingDifficultyDialog'
+  | 'TransitionFromDifficultyDialogToGame';
 
 class ScrHome implements IGameScreen {
   game: IGame;
@@ -25,6 +27,7 @@ class ScrHome implements IGameScreen {
   private readonly btnRules: TButtonWithShadow;
   private readonly btnPlay: TButtonWithShadow;
   private readonly sprPirate: PIXI.Sprite;
+  private readonly groupHelpBubble: PIXI.Container;
   private readonly rulesBubble: PIXI.Graphics;
   private readonly txtRules01: PIXI.Text;
   private readonly sprMiniature: PIXI.Sprite;
@@ -34,6 +37,13 @@ class ScrHome implements IGameScreen {
   private readonly txtRules05: PIXI.Text;
   private readonly txtRules06: PIXI.Text;
   private readonly btnClose: TButtonWithShadow;
+  private readonly groupDialog: PIXI.Container;
+  private readonly sprDialog: PIXI.Sprite;
+  private readonly txtSelectDifficulty: PIXI.Text;
+  private readonly btnEasyDfclt: TButtonWithShadow;
+  private readonly btnMediumDfclt: TButtonWithShadow;
+  private readonly btnHardDfclt: TButtonWithShadow;
+  private readonly btnBack: TButtonWithShadow;
 
   constructor(game: IGame) {
     this.game = game;
@@ -93,6 +103,8 @@ class ScrHome implements IGameScreen {
 
     this.sprPirate = new PIXI.Sprite(game.atlas.textures[G_Tex.Pirate]);
     Utils.centralPivot(this.sprPirate);
+
+    this.groupHelpBubble = new PIXI.Container();
 
     this.rulesBubble = new PIXI.Graphics;
 
@@ -160,6 +172,78 @@ class ScrHome implements IGameScreen {
     this.btnClose.container.position.set(width * 0.27, height * 0.88);
     this.btnClose.button.on('click', this.onBtnCloseClick);
     this.btnClose.button.on('tap', this.onBtnCloseClick);
+
+    this.groupHelpBubble.addChild(this.rulesBubble);
+    this.groupHelpBubble.addChild(this.txtRules01);
+    this.groupHelpBubble.addChild(this.sprMiniature);
+    this.groupHelpBubble.addChild(this.txtRules02);
+    this.groupHelpBubble.addChild(this.txtRules03);
+    this.groupHelpBubble.addChild(this.txtRules04);
+    this.groupHelpBubble.addChild(this.txtRules05);
+    this.groupHelpBubble.addChild(this.txtRules06);
+    this.groupHelpBubble.addChild(this.btnClose.container);
+
+    this.groupDialog = new PIXI.Container();
+    this.groupDialog.position.set(width * 0.5, height * 0.57);
+
+    this.sprDialog = new PIXI.Sprite(game.textures[G_Tex.Dialog]);
+    Utils.centralPivot(this.sprDialog);
+
+    style = new PIXI.TextStyle({
+      dropShadow: {
+        alpha: 0.9,
+        angle: 1,
+        blur: 8,
+        distance: 4,
+        color: '#334B8A',
+      },
+      fill: '#EE7722',
+      fontFamily: G_Fonts.Gradzy,
+      fontSize: 48,
+      fontWeight: '400',
+      letterSpacing: 6,
+      stroke: {
+        color: '#60020A',
+        width: 3,
+      },
+    });
+    this.txtSelectDifficulty = new PIXI.Text({text: 'Please Select Difficulty', style});
+    Utils.centralPivot(this.txtSelectDifficulty);
+    this.txtSelectDifficulty.position.set(65, -151);
+
+    this.btnEasyDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Easy' });
+    Utils.centralPivot(this.btnEasyDfclt.container);
+    this.btnEasyDfclt.container.position.set(0, -50);
+    this.btnEasyDfclt.container.scale.set(0.75);
+    this.btnEasyDfclt.button.on('click', this.onBtnEasyClick);
+    this.btnEasyDfclt.button.on('tap', this.onBtnEasyClick);
+
+    this.btnMediumDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Medium' });
+    Utils.centralPivot(this.btnMediumDfclt.container);
+    this.btnMediumDfclt.container.position.set(0, 55);
+    this.btnMediumDfclt.container.scale.set(0.75);
+    this.btnMediumDfclt.button.on('click', this.onBtnMediumClick);
+    this.btnMediumDfclt.button.on('tap', this.onBtnMediumClick);
+
+    this.btnHardDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Hard' });
+    Utils.centralPivot(this.btnHardDfclt.container);
+    this.btnHardDfclt.container.position.set(0, 160);
+    this.btnHardDfclt.container.scale.set(0.75);
+    this.btnHardDfclt.button.on('click', this.onBtnHardClick);
+    this.btnHardDfclt.button.on('tap', this.onBtnHardClick);
+
+    this.btnBack = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Back' });
+    Utils.centralPivot(this.btnBack.container);
+    this.btnBack.container.position.set(width * 0.91, height * 0.92);
+    this.btnBack.container.scale.set(0.8);
+    this.btnBack.button.on('click', this.onBtnBackClick);
+    this.btnBack.button.on('tap', this.onBtnBackClick);
+
+    this.groupDialog.addChild(this.sprDialog);
+    this.groupDialog.addChild(this.txtSelectDifficulty);
+    this.groupDialog.addChild(this.btnEasyDfclt.container);
+    this.groupDialog.addChild(this.btnMediumDfclt.container);
+    this.groupDialog.addChild(this.btnHardDfclt.container);
   }
 
   onStage(): void {
@@ -177,8 +261,6 @@ class ScrHome implements IGameScreen {
     }
 
     this.game.app.stage.addChild(this.mainContainer);
-    this.txtTitle.alpha = 0;
-    this.mainContainer.addChild(this.txtTitle);
     this.btnRules.container.alpha = 0;
     this.btnRules.container.scale = .1;
     this.btnRules.state.disabled = true;
@@ -187,6 +269,12 @@ class ScrHome implements IGameScreen {
     this.btnPlay.container.scale = .1;
     this.btnPlay.state.disabled = true;
     this.mainContainer.addChild(this.btnPlay.container);
+    this.groupDialog.visible = false;
+    this.mainContainer.addChild(this.groupDialog);
+    this.btnBack.container.visible = false;
+    this.mainContainer.addChild(this.btnBack.container);
+    this.txtTitle.alpha = 0;
+    this.mainContainer.addChild(this.txtTitle);
     this.state = 'ShowingUp';
 
     this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
@@ -205,15 +293,12 @@ class ScrHome implements IGameScreen {
   }
 
   onDismiss(): void {
-    if (this.dynamics.tmlShow) {
-      this.dynamics.tmlShow.kill();
-      this.dynamics.tmlShow = null;
-      delete this.dynamics.tmlShow;
-    }
-    if (this.dynamics.tmlToRules) {
-      this.dynamics.tmlToRules.kill();
-      this.dynamics.tmlToRules = null;
-      delete this.dynamics.tmlToRules;
+    for (const key of ['tmlShow', 'tmlToRules', 'tmlFromRules', 'tmlToDlg', 'tmlCancelDlg']) {
+      if (this.dynamics[key]) {
+        this.dynamics[key].kill();
+        this.dynamics[key] = null;
+        delete this.dynamics[key];
+      }
     }
 
     this.mainContainer.removeChildren();
@@ -240,9 +325,11 @@ class ScrHome implements IGameScreen {
   };
 
   private onBtnRulesClick = () => {
-    if (this.state == 'Regular') {
+    if (this.state === 'Regular') {
       this.game.sound[G_Sound.ButtonClick].play();
       this.state = 'TransitionToRules';
+      this.btnRules.state.disabled = true;
+      this.btnPlay.state.disabled = true;
 
       const { width, height } = this.game.app.screen;
       this.sprPirate.position.set(width * 1.5, height * 0.5);
@@ -259,15 +346,9 @@ class ScrHome implements IGameScreen {
       this.btnClose.container.scale = 0.06;
       this.btnClose.state.disabled = true;
       this.mainContainer.addChild(this.sprPirate);
-      this.mainContainer.addChild(this.rulesBubble);
-      this.mainContainer.addChild(this.sprMiniature);
-      this.mainContainer.addChild(this.txtRules01);
-      this.mainContainer.addChild(this.txtRules02);
-      this.mainContainer.addChild(this.txtRules03);
-      this.mainContainer.addChild(this.txtRules04);
-      this.mainContainer.addChild(this.txtRules05);
-      this.mainContainer.addChild(this.txtRules06);
-      this.mainContainer.addChild(this.btnClose.container);
+      this.mainContainer.addChild(this.groupHelpBubble);
+      this.sprPirate.alpha = 1;
+      this.groupHelpBubble.alpha = 1;
 
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
@@ -279,7 +360,7 @@ class ScrHome implements IGameScreen {
         this.dynamics.tmlToRules = null;
         delete this.dynamics.tmlToRules;
       }})
-        .to(this.txtTitle, { y: -80, duration: .8, ease: 'power2.inout' })
+        .to(this.txtTitle, { y: -80, duration: .8, delay: .15, ease: 'power2.inout' })
         .to(this.btnRules.container, { y: (0.5 + 1) * height, duration: .75, ease: 'power2.inout' }, .2)
         .to(this.btnPlay.container, { y: (0.8 + 1) * height, duration: .75, ease: 'power2.inout' }, .2)
         .to(this.sprPirate, { x: width * 0.76, duration: 1, ease: 'power2.out' }, .5)
@@ -327,16 +408,105 @@ class ScrHome implements IGameScreen {
   };
 
   private onBtnPlayClick = () => {
-    if (this.state == 'Regular') {
+    if (this.state === 'Regular') {
       this.game.sound[G_Sound.ButtonClick].play();
-      console.log('Play Game');
+      this.btnPlay.state.disabled = true;
+      this.btnRules.state.disabled = true;
+      this.btnEasyDfclt.state.disabled = true;
+      this.btnMediumDfclt.state.disabled = true;
+      this.btnHardDfclt.state.disabled = true;
+      this.btnBack.state.disabled = true;
+      this.btnBack.container.scale = 0.01;
+      this.btnBack.container.visible = true;
+      this.state = 'TransitionToDifficultyDialog';
+      this.groupDialog.scale.set(0.01);
+      this.groupDialog.visible = true;
+
+      this.dynamics.tmlToDlg = gsap.timeline({ onComplete: () => {
+          this.state = 'DifficultyDialog';
+          this.btnEasyDfclt.state.disabled = false;
+          this.btnMediumDfclt.state.disabled = false;
+          this.btnHardDfclt.state.disabled = false;
+          this.btnBack.state.disabled = false;
+        }})
+        .to(this.groupDialog.scale, { x: 1, y: 1, duration: .5, ease: 'power2.out' })
+        .set([this.btnPlay.container, this.btnRules.container], { visible: false })
+        .to(this.btnBack.container.scale, { x: .8, y: .8, duration: .5, ease: 'bounce.out' }, .4);
     }
   };
 
   private onBtnCloseClick = () => {
-    if (this.state == 'Rules') {
+    if (this.state === 'Rules') {
       this.game.sound[G_Sound.ButtonClick].play();
-      console.log('Close Rules');
+      this.state = 'TransitionFromRules';
+      this.btnClose.state.disabled = true;
+      this.btnRules.state.disabled = true;
+      this.btnPlay.state.disabled = true;
+
+      const { height } = this.game.app.screen;
+
+      this.dynamics.tmlFromRules = gsap.timeline({ onComplete: () => {
+        this.state = 'Regular';
+        this.dynamics.tmlFromRules.kill();
+        this.dynamics.tmlFromRules = null;
+        delete this.dynamics.tmlFromRules;
+        this.mainContainer.removeChild(this.sprPirate);
+        this.mainContainer.removeChild(this.groupHelpBubble);
+        this.btnRules.state.disabled = false;
+        this.btnPlay.state.disabled = false;
+      }})
+        .to([this.groupHelpBubble, this.sprPirate], { alpha: 0, duration: .65, ease: 'power2.out' })
+        .to(this.txtTitle, { y: height * 0.14, duration: .8, ease: 'power2.out' })
+        .to(this.btnRules.container, { y: height * 0.5, duration: .75, ease: 'power2.inout' }, .2)
+        .to(this.btnPlay.container, { y: height * 0.8, duration: .75, ease: 'power2.inout' }, .2);
+    }
+  };
+
+  private onBtnBackClick = () => {
+    if (this.state === 'DifficultyDialog') {
+      this.game.sound[G_Sound.ButtonClick].play();
+      this.state = 'CancellingDifficultyDialog';
+      this.btnEasyDfclt.state.disabled = true;
+      this.btnMediumDfclt.state.disabled = true;
+      this.btnHardDfclt.state.disabled = true;
+      this.btnBack.state.disabled = true;
+      this.btnPlay.container.visible = true;
+      this.btnRules.container.visible = true;
+
+      this.dynamics.tmlCancelDlg = gsap.timeline({ onComplete: () => {
+        this.state = 'Regular';
+        this.dynamics.tmlCancelDlg.kill();
+        this.dynamics.tmlCancelDlg = null;
+        delete this.dynamics.tmlCancelDlg;
+        this.btnPlay.state.disabled = false;
+        this.btnRules.state.disabled = false;
+        this.btnBack.container.visible = false;
+        this.groupDialog.visible = false;
+      }})
+        .to(this.groupDialog.scale, { x: 0.01, y: 0.01, duration: .5, ease: 'power2.in' })
+        .set(this.groupDialog, { visible: false }, .5)
+        .to(this.btnBack.container.scale, { x: 0.01, y: 0.01, duration: .4, ease: 'power2.in' }, .15);
+    }
+  };
+
+  private onBtnEasyClick = () => {
+    if (this.state === 'DifficultyDialog') {
+      this.game.sound[G_Sound.ButtonClick].play();
+      console.log('Easy Difficulty');
+    }
+  };
+
+  private onBtnMediumClick = () => {
+    if (this.state === 'DifficultyDialog') {
+      this.game.sound[G_Sound.ButtonClick].play();
+      console.log('Medium Difficulty');
+    }
+  };
+
+  private onBtnHardClick = () => {
+    if (this.state === 'DifficultyDialog') {
+      this.game.sound[G_Sound.ButtonClick].play();
+      console.log('Hard Difficulty');
     }
   };
 }
