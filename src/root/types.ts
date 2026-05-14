@@ -8,6 +8,7 @@ interface IGame {
   sound: Record<string, Howl>;
   screens: IGameScreen[];
   curScreen: IGameScreen | null;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
 
   init(): void;
   run(): void;

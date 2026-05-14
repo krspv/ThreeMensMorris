@@ -10,15 +10,15 @@
 },
 "button.png":
 {
-	"frame": {"x":1531,"y":2,"w":341,"h":118},
-	"rotated": true,
+	"frame": {"x":1531,"y":826,"w":341,"h":118},
+	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":341,"h":118},
 	"sourceSize": {"w":341,"h":118}
 },
 "close.png":
 {
-	"frame": {"x":1598,"y":868,"w":58,"h":58},
+	"frame": {"x":1663,"y":947,"w":58,"h":58},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":58,"h":58},
@@ -26,15 +26,31 @@
 },
 "cpu-piece.png":
 {
-	"frame": {"x":1652,"y":2,"w":293,"h":292},
-	"rotated": false,
+	"frame": {"x":1557,"y":298,"w":293,"h":292},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":293,"h":292},
 	"sourceSize": {"w":293,"h":292}
 },
+"empty.png":
+{
+	"frame": {"x":1598,"y":947,"w":62,"h":62},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":62,"h":62},
+	"sourceSize": {"w":62,"h":62}
+},
+"line.png":
+{
+	"frame": {"x":1531,"y":2,"w":821,"h":23},
+	"rotated": true,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":821,"h":23},
+	"sourceSize": {"w":821,"h":23}
+},
 "miniature.png":
 {
-	"frame": {"x":1531,"y":642,"w":223,"h":224},
+	"frame": {"x":1557,"y":594,"w":223,"h":224},
 	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":223,"h":224},
@@ -42,7 +58,7 @@
 },
 "music.png":
 {
-	"frame": {"x":1531,"y":868,"w":64,"h":64},
+	"frame": {"x":1531,"y":947,"w":64,"h":64},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":64,"h":64},
@@ -58,7 +74,7 @@
 },
 "player-piece.png":
 {
-	"frame": {"x":1531,"y":346,"w":293,"h":293},
+	"frame": {"x":1557,"y":2,"w":293,"h":293},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":293,"h":293},
@@ -71,6 +87,6 @@
 	"format": "RGBA8888",
 	"size": {"w":2048,"h":2048},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:00b8bb40a122bca89a2a07f058f353e6:254ef505b23fcdb5cf764d1a8a2e2d8f:cbce6b53f0f49e0bf15173c25c41f876$"
+	"smartupdate": "$TexturePacker:SmartUpdate:0371f5f8f294fc709b44799f8686403a:284bee0c36dab321ac48fe4b06a1d93b:cbce6b53f0f49e0bf15173c25c41f876$"
 }
 }

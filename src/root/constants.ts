@@ -24,6 +24,8 @@ export const G_Tex = {
   Music: 'music.png',
   Close: 'close.png',
   Miniature: 'miniature.png',
+  Line: 'line.png',
+  Empty: 'empty.png',
   Dialog: 'dialog.png',
 } as const;
 

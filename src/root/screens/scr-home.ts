@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import gsap from 'gsap';
 import { IGame, IGameScreen, TButtonWithShadow } from "../types.ts";
-import {G_Description, G_Fonts, G_Sound, G_Tex} from "../constants.ts";
+import { G_Description, G_Fonts, G_Screens, G_Sound, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
 
 
@@ -281,19 +281,23 @@ class ScrHome implements IGameScreen {
         this.state = 'Regular';
         this.btnRules.state.disabled = false;
         this.btnPlay.state.disabled = false;
+        if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
+          this.game.setScreen(G_Screens.Game);
     }});
     this.dynamics.tmlShow.to(this.txtTitle, { alpha: 1, duration: 1.7, ease: 'power2.out' });
     this.dynamics.tmlShow.to(this.btnRules.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .5);
     this.dynamics.tmlShow.to(this.btnRules.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .5);
     this.dynamics.tmlShow.to(this.btnPlay.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .75);
     this.dynamics.tmlShow.to(this.btnPlay.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .75);
+    if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
+      this.dynamics.tmlShow.timeScale(10);
   }
 
   onUpdate(/*ticker: Ticker*/): void {
   }
 
   onDismiss(): void {
-    for (const key of ['tmlShow', 'tmlToRules', 'tmlFromRules', 'tmlToDlg', 'tmlCancelDlg']) {
+    for (const key of ['tmlShow', 'tmlToRules', 'tmlFromRules', 'tmlToDlg', 'tmlCancelDlg', 'tmlToGame']) {
       if (this.dynamics[key]) {
         this.dynamics[key].kill();
         this.dynamics[key] = null;
@@ -492,22 +496,41 @@ class ScrHome implements IGameScreen {
   private onBtnEasyClick = () => {
     if (this.state === 'DifficultyDialog') {
       this.game.sound[G_Sound.ButtonClick].play();
-      console.log('Easy Difficulty');
+      this.game.difficulty = 'Easy';
+      this.transitionToGame();
     }
   };
 
   private onBtnMediumClick = () => {
     if (this.state === 'DifficultyDialog') {
       this.game.sound[G_Sound.ButtonClick].play();
-      console.log('Medium Difficulty');
+      this.game.difficulty = 'Medium';
+      this.transitionToGame();
     }
   };
 
   private onBtnHardClick = () => {
     if (this.state === 'DifficultyDialog') {
       this.game.sound[G_Sound.ButtonClick].play();
-      console.log('Hard Difficulty');
+      this.game.difficulty = 'Hard';
+      this.transitionToGame();
     }
+  };
+
+  private transitionToGame = () => {
+    this.mainContainer.removeChild(this.btnPlay.container, this.btnRules.container);
+
+    this.dynamics.tmlToGame = gsap.timeline({ onComplete: () => {
+        this.state = 'Regular';
+        this.dynamics.tmlToGame.kill();
+        this.dynamics.tmlToGame = null;
+        delete this.dynamics.tmlToGame;
+        this.game.setScreen(G_Screens.Game);
+      }})
+      .to(this.groupDialog.scale, { x: 0.01, y: 0.01, duration: .5, ease: 'power2.in' })
+      .set(this.groupDialog, { visible: false }, .5)
+      .to(this.txtTitle, { y: -80, duration: .8, ease: 'power2.inout' }, .1)
+      .to(this.btnBack.container.scale, { x: 0.01, y: 0.01, duration: .4, ease: 'power2.in' }, .15);
   };
 }
 

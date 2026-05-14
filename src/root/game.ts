@@ -13,6 +13,7 @@ class Game implements IGame {
   sound: Record<string, Howl> = {};
   screens!: IGameScreen[];
   curScreen: IGameScreen | null = null;
+  difficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy';
 
   constructor(app: PIXI.Application) {
     this.app = app;
