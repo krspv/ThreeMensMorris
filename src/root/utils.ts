@@ -71,6 +71,15 @@ class Utils {
 
     return { container: btnContainer, button: buttonSprite, state };
   };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static destroyGsapTimeline = (dynamics: { [x: string]: any; }, strTimeline: string) => {
+    if (dynamics[strTimeline]) {
+      dynamics[strTimeline].kill();
+      dynamics[strTimeline] = null;
+      delete dynamics[strTimeline];
+    }
+  };
 }
 
 
