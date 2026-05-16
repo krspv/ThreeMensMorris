@@ -14,9 +14,10 @@ class Utils {
 
   static clamp = (val: number, min: number, max: number): number => Math.max(min, Math.min(max, val));
 
-  static createButton = (tex: PIXI.Texture, { label = '', fontSize = 64 }: {
+  static createButton = (tex: PIXI.Texture, { label = '', fontSize = 64, pivot = 0.5 }: {
     label?: string;
     fontSize?: number;
+    pivot?: number | PIXI.Point;
   } = {}): TButtonWithShadow => {
     const btnContainer = new PIXI.Container();
 
@@ -42,8 +43,7 @@ class Utils {
         fontFamily: G_Fonts.Gradzy,
         fontSize,
       });
-      text = new PIXI.Text({ text: label, style: txtStyle });
-      Utils.centralPivot(text);
+      text = new PIXI.Text({ text: label, style: txtStyle, anchor: 0.5 });
       btnContainer.addChild(text);
       text.position.set(buttonSprite.width * 0.5, buttonSprite.height * 0.5);
     }
@@ -68,6 +68,9 @@ class Utils {
     buttonSprite.on('touchend', onUp);
     buttonSprite.on('mouseupoutside', onUp);
     buttonSprite.on('touchendoutside', onUp);
+
+    const thePivot = pivot instanceof PIXI.Point ? pivot : new PIXI.Point(pivot, pivot);
+    Utils.centralPivot(btnContainer, thePivot.x, thePivot.y);
 
     return { container: btnContainer, button: buttonSprite, state };
   };

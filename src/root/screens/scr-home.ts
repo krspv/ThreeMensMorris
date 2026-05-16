@@ -49,16 +49,14 @@ class ScrHome implements IGameScreen {
     this.game = game;
     this.sprBackground = new PIXI.Sprite(game.atlas.textures[G_Tex.Background]);
 
-    this.sprMusic = new PIXI.Sprite(game.atlas.textures[G_Tex.Music]);
-    Utils.centralPivot(this.sprMusic);
+    this.sprMusic = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Music], anchor: 0.5 });
     this.sprMusic.position.set(game.app.screen.width * 0.97, game.app.screen.height * 0.05);
     this.sprMusic.interactive = true;
     this.sprMusic.cursor = 'pointer';
     this.sprMusic.on('click', this.onMusicClick);
     this.sprMusic.on('tap', this.onMusicClick);
 
-    this.sprClose = new PIXI.Sprite(game.atlas.textures[G_Tex.Close]);
-    Utils.centralPivot(this.sprClose);
+    this.sprClose = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Close], anchor: 0.5 });
     this.sprClose.position = this.sprMusic.position;
     this.sprClose.scale.set(0.75);
     this.sprClose.visible = false;
@@ -85,24 +83,20 @@ class ScrHome implements IGameScreen {
     });
 
     const { width, height } = this.game.app.screen;
-    this.txtTitle = new PIXI.Text({text: 'Three Men’s Morris', style});
-    Utils.centralPivot(this.txtTitle);
+    this.txtTitle = new PIXI.Text({text: 'Three Men’s Morris', style, anchor: 0.5});
     this.txtTitle.position.set(width * 0.5, height * 0.14);
 
     this.btnRules = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Rules' });
-    Utils.centralPivot(this.btnRules.container);
     this.btnRules.container.position.set(width * 0.5, height * 0.5);
     this.btnRules.button.on('click', this.onBtnRulesClick);
     this.btnRules.button.on('tap', this.onBtnRulesClick);
 
     this.btnPlay = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Play' });
-    Utils.centralPivot(this.btnPlay.container);
     this.btnPlay.container.position.set(width * 0.5, height * 0.8);
     this.btnPlay.button.on('click', this.onBtnPlayClick);
     this.btnPlay.button.on('tap', this.onBtnPlayClick);
 
-    this.sprPirate = new PIXI.Sprite(game.atlas.textures[G_Tex.Pirate]);
-    Utils.centralPivot(this.sprPirate);
+    this.sprPirate = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Pirate], anchor: 0.5 });
 
     this.groupHelpBubble = new PIXI.Container();
 
@@ -130,7 +124,6 @@ class ScrHome implements IGameScreen {
     this.txtRules01.position.set(76, 60);
 
     this.sprMiniature = new PIXI.Sprite(game.atlas.textures[G_Tex.Miniature]);
-    Utils.centralPivot(this.sprPirate);
     this.sprMiniature.position.set(320, 250);
 
     this.txtRules02 = new PIXI.Text({text: '', style});
@@ -168,7 +161,6 @@ class ScrHome implements IGameScreen {
     this.txtRules05.position.set(95, 629);
 
     this.btnClose = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Close' });
-    Utils.centralPivot(this.btnClose.container);
     this.btnClose.container.position.set(width * 0.27, height * 0.88);
     this.btnClose.button.on('click', this.onBtnCloseClick);
     this.btnClose.button.on('tap', this.onBtnCloseClick);
@@ -186,8 +178,7 @@ class ScrHome implements IGameScreen {
     this.groupDialog = new PIXI.Container();
     this.groupDialog.position.set(width * 0.5, height * 0.57);
 
-    this.sprDialog = new PIXI.Sprite(game.textures[G_Tex.Dialog]);
-    Utils.centralPivot(this.sprDialog);
+    this.sprDialog = new PIXI.Sprite({ texture: game.textures[G_Tex.Dialog], anchor: 0.5 });
 
     style = new PIXI.TextStyle({
       dropShadow: {
@@ -207,33 +198,28 @@ class ScrHome implements IGameScreen {
         width: 3,
       },
     });
-    this.txtSelectDifficulty = new PIXI.Text({text: 'Please Select Difficulty', style});
-    Utils.centralPivot(this.txtSelectDifficulty);
+    this.txtSelectDifficulty = new PIXI.Text({ text: 'Please Select Difficulty', style, anchor: 0.5 });
     this.txtSelectDifficulty.position.set(65, -151);
 
     this.btnEasyDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Easy' });
-    Utils.centralPivot(this.btnEasyDfclt.container);
     this.btnEasyDfclt.container.position.set(0, -50);
     this.btnEasyDfclt.container.scale.set(0.75);
     this.btnEasyDfclt.button.on('click', this.onBtnEasyClick);
     this.btnEasyDfclt.button.on('tap', this.onBtnEasyClick);
 
     this.btnMediumDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Medium' });
-    Utils.centralPivot(this.btnMediumDfclt.container);
     this.btnMediumDfclt.container.position.set(0, 55);
     this.btnMediumDfclt.container.scale.set(0.75);
     this.btnMediumDfclt.button.on('click', this.onBtnMediumClick);
     this.btnMediumDfclt.button.on('tap', this.onBtnMediumClick);
 
     this.btnHardDfclt = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Hard' });
-    Utils.centralPivot(this.btnHardDfclt.container);
     this.btnHardDfclt.container.position.set(0, 160);
     this.btnHardDfclt.container.scale.set(0.75);
     this.btnHardDfclt.button.on('click', this.onBtnHardClick);
     this.btnHardDfclt.button.on('tap', this.onBtnHardClick);
 
     this.btnBack = Utils.createButton(game.atlas.textures[G_Tex.Button], { label: 'Back' });
-    Utils.centralPivot(this.btnBack.container);
     this.btnBack.container.position.set(width * 0.91, height * 0.92);
     this.btnBack.container.scale.set(0.8);
     this.btnBack.button.on('click', this.onBtnBackClick);
@@ -298,7 +284,7 @@ class ScrHome implements IGameScreen {
   }
 
   onDismiss(): void {
-    for (const key of ['tmlShow', 'tmlToRules', 'tmlFromRules', 'tmlToDlg', 'tmlCancelDlg', 'tmlToGame'])
+    for (const key of Object.keys(this.dynamics))
       Utils.destroyGsapTimeline(this.dynamics, key);
 
     this.mainContainer.removeChildren();

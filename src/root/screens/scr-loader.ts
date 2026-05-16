@@ -43,8 +43,7 @@ class ScrLoader implements IGameScreen {
     const { width, height } = this.game.app.screen;
 
     // Create the loading text
-    this.txt1 = new PIXI.Text({text: 'Loading', style});
-    Utils.centralPivot(this.txt1);
+    this.txt1 = new PIXI.Text({text: 'Loading', style, anchor: 0.5});
     this.txt1.position.set(width * 0.5, height * 0.3);
 
     // Create the loading bar
@@ -135,7 +134,6 @@ class ScrLoader implements IGameScreen {
 
       // Create the start button
       this.btnStart = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Start' });
-      Utils.centralPivot(this.btnStart.container);
       this.btnStart.button.on('click', this.onBtnStartClick);
       this.btnStart.button.on('tap', this.onBtnStartClick);
       this.btnStart.container.position.set(this.game.app.screen.width * 0.5, this.game.app.screen.height * 0.9);

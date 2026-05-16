@@ -2,25 +2,32 @@ import * as PIXI from "pixi.js";
 import { GlowFilter } from "pixi-filters";
 import gsap from "gsap";
 import { IGame, IGameScreen, TButtonWithShadow } from "../types.ts";
-import { G_Fonts, G_Tex } from "../constants.ts";
+import { G_BaseSize, G_Fonts, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
 
 
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 type TState = 'ShowingUp' | 'Playing';
+type TSubState = 'Idle' | 'Dragging_Piece';
 
 
 class ScrGame implements IGameScreen {
   game: IGame;
 
   private state!: TState;
+  private readonly bTouchDevice: boolean;
+  private readonly pieceRadius: number;
+  // private tmpGrfx: PIXI.Graphics;
+  private readonly rcOpponentPieces: PIXI.Rectangle;
   // Game data
   private playerHasFirstMove!: boolean;
   private score: number[] = [0, 0];  // Scores [you, opponent]
   private bNextIsPlayer!: boolean;
   private timeStartGame!: number;
   private bNoMovement!: boolean; // For showing the hint
+  private subState!: TSubState;
+  private mousePos: PIXI.Point = new PIXI.Point();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private dynamics: Record<string, any> = {};
   // Rendering data
@@ -39,11 +46,14 @@ class ScrGame implements IGameScreen {
   private readonly btnQuit: TButtonWithShadow;
   private readonly txtTurn: PIXI.Text;
   private readonly groupHint: PIXI.Container;
+  private readonly txtDontTouch: PIXI.Text;
   // Groups for reparenting pieces, so that the dragged piece is always on top of other pieces
   private readonly groupPiecesLow: PIXI.Container;
   private readonly groupPiecesHigh: PIXI.Container;
 
   constructor(game: IGame) {
+    this.bTouchDevice = Utils.isTouchDevice();
+
     this.game = game;
     const { width, height } = this.game.app.screen;
 
@@ -52,8 +62,7 @@ class ScrGame implements IGameScreen {
     this.board.position.set(width * 0.53, height * 0.5);
 
     for (let i = 0; i < 8; i++) {
-      const line = new PIXI.Sprite(game.atlas.textures[G_Tex.Line]);
-      Utils.centralPivot(line);
+      const line = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Line], anchor: 0.5 });
       line.alpha = 0.6;
       this.lines.push(line);
     }
@@ -65,8 +74,7 @@ class ScrGame implements IGameScreen {
     for (let r = 0; r < 3; r++)
       for (let c = 0; c < 3; c++) {
         this.positions[r][c].set(400 * (c - 1), 400 * (r - 1));
-        const sprEmpty = new PIXI.Sprite(game.atlas.textures[G_Tex.Empty]);
-        Utils.centralPivot(sprEmpty);
+        const sprEmpty = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Empty], anchor: 0.5 });
         sprEmpty.position.set(this.positions[r][c].x, this.positions[r][c].y);
         this.empties.push(sprEmpty);
       }
@@ -108,8 +116,7 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    this.txtDifficulty = new PIXI.Text({text: 'Difficulty:', style});
-    Utils.centralPivot(this.txtDifficulty);
+    this.txtDifficulty = new PIXI.Text({text: 'Difficulty:', style, anchor: 0.5 });
 
     style = new PIXI.TextStyle({
       dropShadow: {
@@ -129,7 +136,7 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    this.txtD = new PIXI.Text({text: '', style});
+    this.txtD = new PIXI.Text({text: '', style, anchor: { x: 0, y: 0.5 }});
 
     this.groupPieceBoxes = this.createThePieceBoxesGroup();
     const scoreGroup = this.createTheScoreGroup();
@@ -138,7 +145,6 @@ class ScrGame implements IGameScreen {
     this.txtScoreOpponent = scoreGroup.txtScoreOpponent;
 
     this.btnQuit = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Quit' });
-    Utils.centralPivot(this.btnQuit.container);
     this.btnQuit.container.position.set(width * 0.893, height * 0.88);
     this.btnQuit.button.on('click', this.onButQuitClick);
     this.btnQuit.button.on('tap', this.onButQuitClick);
@@ -161,10 +167,11 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    this.txtTurn = new PIXI.Text({text: '', style});
+    this.txtTurn = new PIXI.Text({text: '', style, anchor: 0.5});
     this.txtTurn.position.set(width * 0.155, height * 0.18);
 
     this.groupHint = this.CreateHint();
+    this.txtDontTouch = this.createDontTouchText();
 
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.PlayerPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.PlayerPiece]));
@@ -172,9 +179,17 @@ class ScrGame implements IGameScreen {
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.CpuPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.CpuPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.CpuPiece]));
+    for (let i = 0; i < 3; i++) {
+      this.pieceSprites[i].cursor = 'pointer';
+      this.pieceSprites[i].interactive = true;
+    }
 
     this.groupPiecesLow = new PIXI.Container();
     this.groupPiecesHigh = new PIXI.Container();
+
+    this.rcOpponentPieces = new PIXI.Rectangle(40, 700, 385, 180);
+
+    this.pieceRadius = PIECE_SCALE * this.game.atlas.textures[G_Tex.PlayerPiece].width * 0.5;
   }
 
   private createThePieceBoxesGroup = () => {
@@ -218,13 +233,11 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    const txtYou = new PIXI.Text({text: 'Your pieces:', style});
-    Utils.centralPivot(txtYou, 0);
+    const txtYou = new PIXI.Text({text: 'Your pieces:', style, anchor: { x: 0, y: 0.5 }});
     txtYou.position.set(40, 10);
     ret.addChild(txtYou);
 
-    const txtOpponent = new PIXI.Text({text: 'Opponent pieces:', style});
-    Utils.centralPivot(txtOpponent, 0);
+    const txtOpponent = new PIXI.Text({text: 'Opponent pieces:', style, anchor: { x: 0, y: 0.5 }});
     txtOpponent.position.set(40, 260);
     ret.addChild(txtOpponent);
 
@@ -271,16 +284,13 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    const txtScore = new PIXI.Text({text: 'Score:', style});
-    Utils.centralPivot(txtScore, 0);
+    const txtScore = new PIXI.Text({text: 'Score:', style, anchor: { x: 0, y: 0.5 }});
     txtScore.position.set(40, 10);
     groupScore.addChild(txtScore);
-    const txtYou = new PIXI.Text({text: 'You:', style});
-    Utils.centralPivot(txtYou, 0);
+    const txtYou = new PIXI.Text({text: 'You:', style, anchor: { x: 0, y: 0.5 }});
     txtYou.position.set(50, 110);
     groupScore.addChild(txtYou);
-    const txtOpponent = new PIXI.Text({text: 'Opponent:', style});
-    Utils.centralPivot(txtOpponent, 0);
+    const txtOpponent = new PIXI.Text({text: 'Opponent:', style, anchor: { x: 0, y: 0.5 }});
     txtOpponent.position.set(50, 270);
     groupScore.addChild(txtOpponent);
 
@@ -302,13 +312,11 @@ class ScrGame implements IGameScreen {
         width: 2,
       },
     });
-    const txtScoreYou = new PIXI.Text({text: this.score[0].toString(), style});
-    Utils.centralPivot(txtScoreYou);
-    txtScoreYou.position.set(170, 165);
+    const txtScoreYou = new PIXI.Text({text: this.score[0].toString(), style, anchor: 0.5});
+    txtScoreYou.position.set(160, 165);
     groupScore.addChild(txtScoreYou);
-    const txtScoreOpponent = new PIXI.Text({text: this.score[1].toString(), style});
-    Utils.centralPivot(txtScoreOpponent);
-    txtScoreOpponent.position.set(170, 325);
+    const txtScoreOpponent = new PIXI.Text({text: this.score[1].toString(), style, anchor: 0.5});
+    txtScoreOpponent.position.set(160, 325);
     groupScore.addChild(txtScoreOpponent);
 
     Utils.centralPivot(groupScore);
@@ -338,8 +346,7 @@ class ScrGame implements IGameScreen {
         width: 1,
       },
     });
-    const txtHint = new PIXI.Text({text: 'Hint:', style});
-    Utils.centralPivot(txtHint, 0);
+    const txtHint = new PIXI.Text({text: 'Hint:', style, anchor: { x: 0, y: 0.5 }});
     txtHint.position.set(0, 0);
     ret.addChild(txtHint);
 
@@ -365,12 +372,10 @@ class ScrGame implements IGameScreen {
       breakWords: false,
       align: 'left',
     });
-    const txtAdvice = new PIXI.Text({text: 'Move your pieces onto the board', style});
-    Utils.centralPivot(txtAdvice, 0);
+    const txtAdvice = new PIXI.Text({text: 'Move your pieces onto the board', style, anchor: { x: 0, y: 0.5 }});
     txtAdvice.position.set(0, 50);
     ret.addChild(txtAdvice);
 
-    Utils.centralPivot(txtHint, 0);
     txtHint.position.set(0, 0);
     ret.addChild(txtHint);
 
@@ -381,6 +386,39 @@ class ScrGame implements IGameScreen {
     ret.filters = [
       new GlowFilter({ distance: 60, outerStrength: 2, color: '#AAFFAA', alpha: 0.3 }),
     ];
+
+    return ret;
+  };
+
+  private createDontTouchText = () => {
+    const style = new PIXI.TextStyle({
+      dropShadow: {
+        alpha: 1,
+        angle: 1,
+        blur: 12,
+        distance: 8,
+        color: 'black',
+      },
+      fill: '#aaff91',
+      fontFamily: G_Fonts.Gradzy,
+      fontSize: 56,
+      fontWeight: '400',
+      letterSpacing: 3,
+      stroke: {
+        color: '#d54040',
+        width: 2,
+      },
+      wordWrap: true,
+      wordWrapWidth: 400,
+      breakWords: false,
+      align: 'center',
+    });
+    const ret = new PIXI.Text({text: "Don't touch my pieces!", style, anchor: 0.5});
+    ret.filters = [
+      new GlowFilter({ distance: 50, outerStrength: 3, color: '#d85151', alpha: 0.5 }),
+    ];
+    const { width, height } = this.game.app.screen;
+    ret.position.set(width * 0.14, height * 0.84);
 
     return ret;
   };
@@ -399,7 +437,6 @@ class ScrGame implements IGameScreen {
     this.mainContainer.addChild(this.txtDifficulty);
 
     this.txtD.text = this.game.difficulty;
-    Utils.centralPivot(this.txtD, 0);
     this.txtD.position.set(width * 0.145, height * 0.05 - 100);
     this.mainContainer.addChild(this.txtD);
 
@@ -420,6 +457,8 @@ class ScrGame implements IGameScreen {
     this.mainContainer.addChild(this.groupHint);
 
     this.mainContainer.addChild(this.groupPiecesLow);
+    this.txtDontTouch.alpha = 0;
+    this.mainContainer.addChild(this.txtDontTouch);
     this.mainContainer.addChild(this.groupPiecesHigh);
 
     for (let i = 0; i < 3; i++) {
@@ -451,13 +490,46 @@ class ScrGame implements IGameScreen {
       .set(this.pieceSprites, { visible: true, stagger: 0.1 }, 1.1)
       .to(this.btnQuit.container, { alpha: 1, duration: .3, ease: 'power2.out' }, .2)
       .to(this.btnQuit.container, { scale: .8, duration: .6, ease: 'power3.out' }, .4);
+
+    document.addEventListener('mousedown', this.onDocMouseDown, { capture: true, passive: true });
+    document.addEventListener('mousemove', this.onDocMouseMove, { capture: true, passive: true });
+    if (this.bTouchDevice) {
+      document.addEventListener('touchstart', this.onDocTouchStart, { capture: true, passive: true });
+      document.addEventListener('touchmove', this.onDocTouchMove, { capture: true, passive: true });
+      document.addEventListener('touchend', this.onDocTouchEnd, { capture: true, passive: true });
+      document.addEventListener('touchcancel', this.onDocTouchEnd, { capture: true, passive: true });
+    }
+
+    // this.tmpGrfx = new PIXI.Graphics();
+    // this.mainContainer.addChild(this.tmpGrfx);
   }
 
-  onUpdate(/*ticker: Ticker*/): void {
+    onUpdate(ticker: PIXI.Ticker): void {
+    if (this.state === 'Playing') {
+      if (this.bNoMovement && !this.groupHint.visible) {
+        const now = performance.now();
+        if (now - this.timeStartGame > 5000) {
+          this.groupHint.alpha = 0;
+          this.groupHint.visible = true;
+
+          this.dynamics.tmlShowHint = gsap.timeline({ onComplete: () => {
+              Utils.destroyGsapTimeline(this.dynamics, 'tmlShowHint');
+            }})
+            .to(this.groupHint, { alpha: 1, duration: 1.2, ease: 'none' }, .1);
+        }
+      }
+    }
+
+    let deltaAlpha: number;
+    if (this.state === 'Playing' && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
+      deltaAlpha = ticker.elapsedMS * 0.001;
+    else
+      deltaAlpha= -ticker.elapsedMS * 0.003;
+    this.txtDontTouch.alpha = Utils.clamp(this.txtDontTouch.alpha + deltaAlpha, 0, 1);
   }
 
   onDismiss(): void {
-    for (const key of ['tmlShow', 'tmlTurn'])
+    for (const key of Object.keys(this.dynamics))
       Utils.destroyGsapTimeline(this.dynamics, key);
 
     this.mainContainer.removeChildren();
@@ -474,7 +546,6 @@ class ScrGame implements IGameScreen {
     // Animate the Turn text
     this.txtTurn.visible = true;
     this.txtTurn.text = this.bNextIsPlayer ? 'Your Turn' : "Opponent's Turn";
-    Utils.centralPivot(this.txtTurn);
 
     this.txtTurn.alpha = 0;
     this.txtTurn.y += 20;
@@ -490,11 +561,69 @@ class ScrGame implements IGameScreen {
 
     this.bNoMovement = true;
     this.timeStartGame = performance.now();
+    this.groupHint.visible = false;
+    this.txtDontTouch.alpha = 0;
+
+    this.subState = 'Idle';
   };
 
   private onButQuitClick = () => {
     if (this.state === 'Playing') {
       console.log('Quit');
+    }
+  };
+
+  private onDocMouseDown = (evt: MouseEvent) => {
+    // TODO: fix duplicated lines
+    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
+    let xPos = (evt.clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
+    let yPos = (evt.clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
+    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
+    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
+    this.mousePos.set(xPos, yPos);
+
+    this.startDrag();
+  };
+
+  private onDocMouseMove = (evt: MouseEvent) => {
+    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
+    let xPos = (evt.clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
+    let yPos = (evt.clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
+    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
+    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
+    this.mousePos.set(xPos, yPos);
+  };
+
+  private onDocTouchStart = (evt: TouchEvent) => {
+    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
+    let xPos = (evt.touches[0].clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
+    let yPos = (evt.touches[0].clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
+    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
+    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
+    this.mousePos.set(xPos, yPos);
+  };
+
+  private onDocTouchMove = (evt: TouchEvent) => {
+    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
+    let xPos = (evt.touches[0].clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
+    let yPos = (evt.touches[0].clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
+    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
+    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
+    this.mousePos.set(xPos, yPos);
+  };
+
+  private onDocTouchEnd = () => {
+    this.mousePos.set(-1000, -1000);
+  };
+
+  private startDrag = () => {
+    if (this.state === 'Playing' && this.subState === 'Idle') {
+      for (let i = 0; i < 3; i++) {
+        console.log(`before ${i}, ${Math.abs(this.pieceSprites[i].x - this.mousePos.x).toFixed(1)}, ${Math.abs(this.pieceSprites[i].y - this.mousePos.y).toFixed(1)}`);
+        if (Math.abs(this.pieceSprites[i].x - this.mousePos.x) < this.pieceRadius && Math.abs(this.pieceSprites[i].y - this.mousePos.y) < this.pieceRadius) {
+          console.log(`${i}, ${Math.abs(this.pieceSprites[i].x - this.mousePos.x).toFixed(1)}, ${Math.abs(this.pieceSprites[i].y - this.mousePos.y).toFixed(1)}`);
+        }
+      }
     }
   };
 }
