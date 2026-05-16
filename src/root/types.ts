@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { Howl } from "howler";
 
+
 interface IGame {
   app: PIXI.Application;
   atlas: PIXI.Spritesheet;
@@ -32,8 +33,20 @@ type TButtonWithShadow = {
   state: { disabled: boolean };
 };
 
+class DragPieceData {
+  constructor(
+    public index: number = -1,
+    public mouseStart: PIXI.Point = new PIXI.Point(0, 0),
+    public offset: PIXI.Point = new PIXI.Point(0, 0),
+    public spriteStartPos: PIXI.Point = new PIXI.Point(0, 0),
+  ) {}
+};
+
+
 export type {
   IGame,
   IGameScreen,
   TButtonWithShadow,
 };
+
+export { DragPieceData };

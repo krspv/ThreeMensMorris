@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
-import { GlowFilter } from "pixi-filters";
+import { GlowFilter, DropShadowFilter } from "pixi-filters";
 import gsap from "gsap";
-import { IGame, IGameScreen, TButtonWithShadow } from "../types.ts";
+import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from "../types.ts";
 import { G_BaseSize, G_Fonts, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
 
@@ -28,6 +28,7 @@ class ScrGame implements IGameScreen {
   private bNoMovement!: boolean; // For showing the hint
   private subState!: TSubState;
   private mousePos: PIXI.Point = new PIXI.Point();
+  private dragPieceData: DragPieceData = new DragPieceData();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private dynamics: Record<string, any> = {};
   // Rendering data
@@ -41,6 +42,7 @@ class ScrGame implements IGameScreen {
   private readonly groupPieceBoxes: PIXI.Container;
   private readonly groupScore: PIXI.Container;
   private readonly pieceSprites: PIXI.Sprite[] = [];
+  private readonly pieceDropShadowFilter: DropShadowFilter;
   private readonly txtScoreYou: PIXI.Text;
   private readonly txtScoreOpponent: PIXI.Text;
   private readonly btnQuit: TButtonWithShadow;
@@ -173,6 +175,8 @@ class ScrGame implements IGameScreen {
     this.groupHint = this.CreateHint();
     this.txtDontTouch = this.createDontTouchText();
 
+    this.pieceRadius = PIECE_SCALE * this.game.atlas.textures[G_Tex.PlayerPiece].width * 0.5;
+
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.PlayerPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.PlayerPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.PlayerPiece]));
@@ -180,16 +184,23 @@ class ScrGame implements IGameScreen {
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.CpuPiece]));
     this.pieceSprites.push(new PIXI.Sprite(game.atlas.textures[G_Tex.CpuPiece]));
     for (let i = 0; i < 3; i++) {
+      this.pieceSprites[i].anchor.set(0.5);
       this.pieceSprites[i].cursor = 'pointer';
       this.pieceSprites[i].interactive = true;
+      this.pieceSprites[i].hitArea = new PIXI.Circle(0, 0, this.game.atlas.textures[G_Tex.PlayerPiece].width * 0.5);
     }
+
+    this.pieceDropShadowFilter = new DropShadowFilter({
+      blur: 4,           // blur strength (like CSS blur radius)
+      color: 0x000000,   // shadow color
+      alpha: .6,        // opacity
+      offset: { x: 15, y: 15 },
+    });
 
     this.groupPiecesLow = new PIXI.Container();
     this.groupPiecesHigh = new PIXI.Container();
 
     this.rcOpponentPieces = new PIXI.Rectangle(40, 700, 385, 180);
-
-    this.pieceRadius = PIECE_SCALE * this.game.atlas.textures[G_Tex.PlayerPiece].width * 0.5;
   }
 
   private createThePieceBoxesGroup = () => {
@@ -463,7 +474,7 @@ class ScrGame implements IGameScreen {
 
     for (let i = 0; i < 3; i++) {
       this.pieceSprites[i].scale.set(PIECE_SCALE);
-      this.pieceSprites[i].position.set(width * 0.037 + i * 119, height * 0.52);
+      this.pieceSprites[i].position.set(width * 0.037 + i * 119 + this.pieceRadius, height * 0.52 + this.pieceRadius);
       this.pieceSprites[i].visible = false;
       this.groupPiecesLow.addChild(this.pieceSprites[i]);
       const k = i + 3;
@@ -508,7 +519,7 @@ class ScrGame implements IGameScreen {
     if (this.state === 'Playing') {
       if (this.bNoMovement && !this.groupHint.visible) {
         const now = performance.now();
-        if (now - this.timeStartGame > 5000) {
+        if (now - this.timeStartGame > 9_000) {
           this.groupHint.alpha = 0;
           this.groupHint.visible = true;
 
@@ -573,43 +584,33 @@ class ScrGame implements IGameScreen {
     }
   };
 
-  private onDocMouseDown = (evt: MouseEvent) => {
-    // TODO: fix duplicated lines
+  private saveMousePos(clientX: number, clientY: number) {
     const rcCanvas = this.game.app.canvas.getBoundingClientRect();
-    let xPos = (evt.clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
-    let yPos = (evt.clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
+    let xPos = (clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
+    let yPos = (clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
     xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
     yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
     this.mousePos.set(xPos, yPos);
+  }
 
+  private onDocMouseDown = (evt: MouseEvent) => {
+    this.saveMousePos(evt.clientX, evt.clientY);
     this.startDrag();
   };
 
   private onDocMouseMove = (evt: MouseEvent) => {
-    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
-    let xPos = (evt.clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
-    let yPos = (evt.clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
-    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
-    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
-    this.mousePos.set(xPos, yPos);
+    this.saveMousePos(evt.clientX, evt.clientY);
+    this.moveDrag();
   };
 
   private onDocTouchStart = (evt: TouchEvent) => {
-    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
-    let xPos = (evt.touches[0].clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
-    let yPos = (evt.touches[0].clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
-    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
-    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
-    this.mousePos.set(xPos, yPos);
+    this.saveMousePos(evt.touches[0].clientX, evt.touches[0].clientY);
+    this.startDrag();
   };
 
   private onDocTouchMove = (evt: TouchEvent) => {
-    const rcCanvas = this.game.app.canvas.getBoundingClientRect();
-    let xPos = (evt.touches[0].clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
-    let yPos = (evt.touches[0].clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
-    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
-    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
-    this.mousePos.set(xPos, yPos);
+    this.saveMousePos(evt.touches[0].clientX, evt.touches[0].clientY);
+    this.moveDrag();
   };
 
   private onDocTouchEnd = () => {
@@ -619,11 +620,27 @@ class ScrGame implements IGameScreen {
   private startDrag = () => {
     if (this.state === 'Playing' && this.subState === 'Idle') {
       for (let i = 0; i < 3; i++) {
-        console.log(`before ${i}, ${Math.abs(this.pieceSprites[i].x - this.mousePos.x).toFixed(1)}, ${Math.abs(this.pieceSprites[i].y - this.mousePos.y).toFixed(1)}`);
-        if (Math.abs(this.pieceSprites[i].x - this.mousePos.x) < this.pieceRadius && Math.abs(this.pieceSprites[i].y - this.mousePos.y) < this.pieceRadius) {
-          console.log(`${i}, ${Math.abs(this.pieceSprites[i].x - this.mousePos.x).toFixed(1)}, ${Math.abs(this.pieceSprites[i].y - this.mousePos.y).toFixed(1)}`);
+        const local = this.pieceSprites[i].toLocal(this.mousePos);
+        if (this.pieceSprites[i].hitArea!.contains(local.x, local.y)) {
+          const dx = this.pieceSprites[i].x - this.mousePos.x;
+          const dy = this.pieceSprites[i].y - this.mousePos.y;
+          this.subState = 'Dragging_Piece';
+          this.groupPiecesHigh.reparentChild(this.pieceSprites[i]);
+          this.pieceSprites[i].scale.set(PIECE_SCALE * 1.2);
+          this.pieceSprites[i].filters = [this.pieceDropShadowFilter];
+          this.dragPieceData.index = i;
+          this.dragPieceData.mouseStart = this.mousePos.clone();
+          this.dragPieceData.offset.set(dx, dy);
+          this.dragPieceData.spriteStartPos = this.pieceSprites[i].position.clone();
+          return;
         }
       }
+    }
+  };
+
+  private moveDrag = () => {
+    if (this.state === 'Playing' && this.subState === 'Dragging_Piece') {
+      this.pieceSprites[this.dragPieceData.index].position.set(this.mousePos.x + this.dragPieceData.offset.x, this.mousePos.y + this.dragPieceData.offset.y);
     }
   };
 }
