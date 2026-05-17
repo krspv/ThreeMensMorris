@@ -41,13 +41,15 @@ class DragPieceData {
   ) {}
 };
 
-type Slot = 'Empty' | 'Player' | 'Enemy';
+type Slot = 'Empty' | 'Player' | 'Cpu';
+type Move = { type: 'Placement' | 'Movement', from: number, to: number }
 
 class GameState {
   public board: Slot[];
+  public move: Move | null = null;
 
-  constructor() {
-    this.board = ['Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty'];
+  constructor(board: Slot[] = ['Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty'] ) {
+    this.board = [...board];
   }
 
   public reset(): void {
@@ -55,7 +57,19 @@ class GameState {
   };
 
   public getSlot = (row: number, col: number): Slot => this.board[3*row + col];
+  public getSlotIdx = (index: number): Slot => this.board[index];
   public setSlot = (row: number, col: number, value: Slot): void => { this.board[3*row + col] = value; };
+  public setSlotIdx = (index: number, value: Slot): void => { this.board[index] = value; };
+
+  public isWinner = (val: Slot): boolean =>
+       (this.board[0] === val && this.board[1] === val && this.board[2] === val)
+    || (this.board[3] === val && this.board[4] === val && this.board[5] === val)
+    || (this.board[6] === val && this.board[7] === val && this.board[8] === val)
+    || (this.board[0] === val && this.board[3] === val && this.board[6] === val)
+    || (this.board[1] === val && this.board[4] === val && this.board[7] === val)
+    || (this.board[2] === val && this.board[5] === val && this.board[8] === val)
+    || (this.board[0] === val && this.board[4] === val && this.board[8] === val)
+    || (this.board[2] === val && this.board[4] === val && this.board[6] === val);
 };
 
 
@@ -65,6 +79,7 @@ export type {
   IGameScreen,
   TButtonWithShadow,
   Slot,
+  Move,
 };
 
 export {

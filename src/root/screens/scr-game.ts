@@ -4,13 +4,14 @@ import gsap from "gsap";
 import { IGame, IGameScreen, TButtonWithShadow, DragPieceData, GameState } from "../types.ts";
 import { G_Fonts, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
+import Minimax from "../minimax.ts";
 
 
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 const DROP_DISTSQ = 2_900;
 type TState = 'ShowingUp' | 'Playing';
-type TSubState = 'Idle' | 'Dragging_Piece';
+type TSubState = 'Idle' | 'Dragging_Piece' | 'CpuMove';
 
 
 class ScrGame implements IGameScreen {
@@ -748,10 +749,13 @@ class ScrGame implements IGameScreen {
 
         this.placedPieces[this.dragPieceData.index] = true;
 
+        this.bNoMovement = false;
         this.bNextIsPlayer = !this.bNextIsPlayer;
         this.animateTurnText();
+        this.subState = 'CpuMove';
 
-        this.bNoMovement = false;
+        const cpuMove = new Minimax(this.gameState).think(4);
+        console.log(cpuMove);
       } else {
         // Travel the piece back to its original position
         const ptTo = this.calcPlayerPieceStartPos(this.dragPieceData.index);
