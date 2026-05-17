@@ -1,13 +1,14 @@
 import * as PIXI from "pixi.js";
-import { GlowFilter, DropShadowFilter } from "pixi-filters";
+import { GlowFilter, DropShadowFilter } from 'pixi-filters';
 import gsap from "gsap";
-import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from "../types.ts";
-import { G_BaseSize, G_Fonts, G_Tex } from "../constants.ts";
+import { IGame, IGameScreen, TButtonWithShadow, DragPieceData, GameState } from "../types.ts";
+import { G_Fonts, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
 
 
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
+const DROP_DISTSQ = 2_900;
 type TState = 'ShowingUp' | 'Playing';
 type TSubState = 'Idle' | 'Dragging_Piece';
 
@@ -29,13 +30,17 @@ class ScrGame implements IGameScreen {
   private subState!: TSubState;
   private mousePos: PIXI.Point = new PIXI.Point();
   private dragPieceData: DragPieceData = new DragPieceData();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private dynamics: Record<string, any> = {};
+  private gameState: GameState = new GameState();
+  private tweenTarget = { alpha: 1, scale: 1 }; // For the empty slots
+  private dropTarget: number = -1;
+  private placedPieces: boolean[] = [];
+  private gsapTimelines: Record<string, gsap.core.Timeline> = {};
   // Rendering data
   private readonly mainContainer: PIXI.Container;
   private readonly board: PIXI.Container;
   private readonly lines: PIXI.Sprite[] = [];
   private readonly empties: PIXI.Sprite[] = [];
+  private readonly empties2: PIXI.Sprite[] = [];  // For animation over the empty fields
   private readonly positions: PIXI.Point[][];
   private readonly txtDifficulty: PIXI.Text;
   private readonly txtD: PIXI.Text;
@@ -49,6 +54,7 @@ class ScrGame implements IGameScreen {
   private readonly txtTurn: PIXI.Text;
   private readonly groupHint: PIXI.Container;
   private readonly txtDontTouch: PIXI.Text;
+  private readonly cmf: PIXI.ColorMatrixFilter;  // For glow on the dragged piece
   // Groups for reparenting pieces, so that the dragged piece is always on top of other pieces
   private readonly groupPiecesLow: PIXI.Container;
   private readonly groupPiecesHigh: PIXI.Container;
@@ -79,6 +85,10 @@ class ScrGame implements IGameScreen {
         const sprEmpty = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Empty], anchor: 0.5 });
         sprEmpty.position.set(this.positions[r][c].x, this.positions[r][c].y);
         this.empties.push(sprEmpty);
+        const sprEmpty2 = new PIXI.Sprite({ texture: game.atlas.textures[G_Tex.Empty], anchor: 0.5 });
+        sprEmpty2.position.set(this.positions[r][c].x, this.positions[r][c].y);
+        sprEmpty2.visible = false;
+        this.empties2.push(sprEmpty2);
       }
 
     this.lines[0].position = this.positions[0][1].clone();
@@ -99,6 +109,7 @@ class ScrGame implements IGameScreen {
 
     this.lines.forEach(line => this.board.addChild(line));
     this.empties.forEach(empty => this.board.addChild(empty));
+    this.empties2.forEach(empty => this.board.addChild(empty));
 
     let style = new PIXI.TextStyle({
       dropShadow: {
@@ -201,6 +212,9 @@ class ScrGame implements IGameScreen {
     this.groupPiecesHigh = new PIXI.Container();
 
     this.rcOpponentPieces = new PIXI.Rectangle(40, 700, 385, 180);
+
+    this.cmf = new PIXI.ColorMatrixFilter();
+    this.cmf.brightness(1.1, false);
   }
 
   private createThePieceBoxesGroup = () => {
@@ -474,7 +488,7 @@ class ScrGame implements IGameScreen {
 
     for (let i = 0; i < 3; i++) {
       this.pieceSprites[i].scale.set(PIECE_SCALE);
-      this.pieceSprites[i].position.set(width * 0.037 + i * 119 + this.pieceRadius, height * 0.52 + this.pieceRadius);
+      this.pieceSprites[i].position = this.calcPlayerPieceStartPos(i);
       this.pieceSprites[i].visible = false;
       this.groupPiecesLow.addChild(this.pieceSprites[i]);
       const k = i + 3;
@@ -488,8 +502,8 @@ class ScrGame implements IGameScreen {
     this.txtScoreYou.text = '0';
     this.txtScoreOpponent.text = '0';
 
-    this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
+    this.gsapTimelines.tmlShow = gsap.timeline({ onComplete: () => {
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShow');
 
         this.state = 'Playing';
         this.btnQuit.state.disabled = false;
@@ -504,6 +518,7 @@ class ScrGame implements IGameScreen {
 
     document.addEventListener('mousedown', this.onDocMouseDown, { capture: true, passive: true });
     document.addEventListener('mousemove', this.onDocMouseMove, { capture: true, passive: true });
+    document.addEventListener('mouseup', this.onDocMouseUp, { capture: true, passive: true });
     if (this.bTouchDevice) {
       document.addEventListener('touchstart', this.onDocTouchStart, { capture: true, passive: true });
       document.addEventListener('touchmove', this.onDocTouchMove, { capture: true, passive: true });
@@ -515,7 +530,7 @@ class ScrGame implements IGameScreen {
     // this.mainContainer.addChild(this.tmpGrfx);
   }
 
-    onUpdate(ticker: PIXI.Ticker): void {
+  onUpdate(ticker: PIXI.Ticker): void {
     if (this.state === 'Playing') {
       if (this.bNoMovement && !this.groupHint.visible) {
         const now = performance.now();
@@ -523,25 +538,57 @@ class ScrGame implements IGameScreen {
           this.groupHint.alpha = 0;
           this.groupHint.visible = true;
 
-          this.dynamics.tmlShowHint = gsap.timeline({ onComplete: () => {
-              Utils.destroyGsapTimeline(this.dynamics, 'tmlShowHint');
+          this.gsapTimelines.tmlShowHint = gsap.timeline({ onComplete: () => {
+              Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShowHint');
             }})
             .to(this.groupHint, { alpha: 1, duration: 1.2, ease: 'none' }, .1);
         }
       }
+      if (!this.bNoMovement && this.groupHint.visible) {
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShowHint');
+        this.groupHint.visible = false;
+      }
     }
 
     let deltaAlpha: number;
-    if (this.state === 'Playing' && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
+    if (this.state === 'Playing' && this.subState === 'Idle' && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
       deltaAlpha = ticker.elapsedMS * 0.001;
     else
       deltaAlpha= -ticker.elapsedMS * 0.003;
     this.txtDontTouch.alpha = Utils.clamp(this.txtDontTouch.alpha + deltaAlpha, 0, 1);
+
+    if (this.state === 'Playing' && this.subState === 'Dragging_Piece') {
+      // Find a drop target
+      this.dropTarget = -1;
+      const sprDrag = this.pieceSprites[this.dragPieceData.index];
+      sprDrag.filters = [this.pieceDropShadowFilter];
+      for (let i = 0; i < this.empties.length; i++) {
+        if (this.empties2[i].visible) {
+          const emptyGlobalPos = this.empties2[i].toGlobal({ x: 0, y: 0 });
+          const dx = emptyGlobalPos.x - sprDrag.x;
+          const dy = emptyGlobalPos.y - sprDrag.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < DROP_DISTSQ) {
+            this.dropTarget = i;
+            sprDrag.filters = [this.cmf, this.pieceDropShadowFilter];
+            break;
+          }
+        }
+      }
+
+      // Blink the empty spots
+      this.empties2.forEach(empty => {
+        if (empty.visible) {
+          empty.alpha = this.tweenTarget.alpha;
+          empty.scale = this.tweenTarget.scale;
+        }
+      });
+    }
   }
 
   onDismiss(): void {
-    for (const key of Object.keys(this.dynamics))
-      Utils.destroyGsapTimeline(this.dynamics, key);
+    for (const key of Object.keys(this.gsapTimelines))
+      Utils.destroyGsapTimeline(this.gsapTimelines, key);
 
     this.mainContainer.removeChildren();
     this.game.app.stage.removeChild(this.mainContainer);
@@ -555,20 +602,7 @@ class ScrGame implements IGameScreen {
     this.playerHasFirstMove = !this.playerHasFirstMove; // Next time switch turns
 
     // Animate the Turn text
-    this.txtTurn.visible = true;
-    this.txtTurn.text = this.bNextIsPlayer ? 'Your Turn' : "Opponent's Turn";
-
-    this.txtTurn.alpha = 0;
-    this.txtTurn.y += 20;
-    this.txtTurn.scale.set(1);
-    this.dynamics.tmlTurn = gsap.timeline({ onComplete: () => {
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlTurn');
-      }})
-      .to(this.txtTurn, { alpha: 1, duration: .45, ease: 'none' })
-      .to(this.txtTurn, { y: '-=20', duration: .7, ease: 'power1.out' }, 0)
-      .to(this.txtTurn.scale, { x: 1.1, y: 1.1, duration: .25, ease: 'power1.out' })
-      .to(this.txtTurn.scale, { x: 1, y: 1, duration: .25, ease: 'power1.in' });
-    this.dynamics.tmlTurn.timeScale(3);
+    this.animateTurnText();
 
     this.bNoMovement = true;
     this.timeStartGame = performance.now();
@@ -576,6 +610,28 @@ class ScrGame implements IGameScreen {
     this.txtDontTouch.alpha = 0;
 
     this.subState = 'Idle';
+    this.gameState.reset();
+    this.placedPieces = [false, false, false];
+  };
+
+  private animateTurnText = () => {
+    Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlTurn');
+
+    const { height } = this.game.app.screen;
+
+    this.txtTurn.visible = true;
+    this.txtTurn.text = this.bNextIsPlayer ? 'Your Turn' : "Opponent's Turn";
+    this.txtTurn.alpha = 0;
+    this.txtTurn.y = height * 0.18 + 20;
+    this.txtTurn.scale.set(1);
+    this.gsapTimelines.tmlTurn = gsap.timeline({ onComplete: () => {
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlTurn');
+      }})
+      .to(this.txtTurn, { alpha: 1, duration: .45, ease: 'none' })
+      .to(this.txtTurn, { y: '-=20', duration: .7, ease: 'power1.out' }, 0)
+      .to(this.txtTurn.scale, { x: 1.1, y: 1.1, duration: .25, ease: 'power1.out' })
+      .to(this.txtTurn.scale, { x: 1, y: 1, duration: .25, ease: 'power1.in' });
+    this.gsapTimelines.tmlTurn.timeScale(3);
   };
 
   private onButQuitClick = () => {
@@ -585,11 +641,12 @@ class ScrGame implements IGameScreen {
   };
 
   private saveMousePos(clientX: number, clientY: number) {
+    const { width, height } = this.game.app.screen;
     const rcCanvas = this.game.app.canvas.getBoundingClientRect();
-    let xPos = (clientX - rcCanvas.left) / rcCanvas.width * G_BaseSize.Width;
-    let yPos = (clientY - rcCanvas.top) / rcCanvas.height * G_BaseSize.Height;
-    xPos = Utils.clamp(xPos, 0, G_BaseSize.Width);
-    yPos = Utils.clamp(yPos, 0, G_BaseSize.Height);
+    let xPos = (clientX - rcCanvas.left) / rcCanvas.width * width;
+    let yPos = (clientY - rcCanvas.top) / rcCanvas.height * height;
+    xPos = Utils.clamp(xPos, 0, width);
+    yPos = Utils.clamp(yPos, 0, height);
     this.mousePos.set(xPos, yPos);
   }
 
@@ -601,6 +658,11 @@ class ScrGame implements IGameScreen {
   private onDocMouseMove = (evt: MouseEvent) => {
     this.saveMousePos(evt.clientX, evt.clientY);
     this.moveDrag();
+  };
+
+  private onDocMouseUp = () => {
+    this.mousePos.set(-1000, -1000);
+    this.endDrag();
   };
 
   private onDocTouchStart = (evt: TouchEvent) => {
@@ -615,32 +677,97 @@ class ScrGame implements IGameScreen {
 
   private onDocTouchEnd = () => {
     this.mousePos.set(-1000, -1000);
+    this.endDrag();
   };
 
   private startDrag = () => {
     if (this.state === 'Playing' && this.subState === 'Idle') {
       for (let i = 0; i < 3; i++) {
         const local = this.pieceSprites[i].toLocal(this.mousePos);
-        if (this.pieceSprites[i].hitArea!.contains(local.x, local.y)) {
+        if (this.pieceSprites[i].hitArea!.contains(local.x, local.y) && !this.placedPieces[i]) {
+
+          Utils.destroyGsapTimeline(this.gsapTimelines, `travel${i}`);
+
           const dx = this.pieceSprites[i].x - this.mousePos.x;
           const dy = this.pieceSprites[i].y - this.mousePos.y;
           this.subState = 'Dragging_Piece';
-          this.groupPiecesHigh.reparentChild(this.pieceSprites[i]);
+          if (this.pieceSprites[i].parent !== this.groupPiecesHigh)
+            this.groupPiecesHigh.reparentChild(this.pieceSprites[i]);
           this.pieceSprites[i].scale.set(PIECE_SCALE * 1.2);
           this.pieceSprites[i].filters = [this.pieceDropShadowFilter];
           this.dragPieceData.index = i;
           this.dragPieceData.mouseStart = this.mousePos.clone();
           this.dragPieceData.offset.set(dx, dy);
-          this.dragPieceData.spriteStartPos = this.pieceSprites[i].position.clone();
+          this.empties2.forEach((empty, idx) => {
+            if (this.gameState.board[idx] === 'Empty') {
+              empty.visible = true;
+              empty.alpha = 1;
+              empty.scale = 1;
+            } else
+              empty.visible = false;
+          });
+          this.tweenTarget = { alpha: .9, scale: 1 };
+          this.gsapTimelines.tmlSpotBlink = gsap.timeline({ repeat: -1})
+            .to(this.tweenTarget, { duration: .5, ease: 'none', alpha: 0 })
+            .to(this.tweenTarget, { duration: .6, ease: 'none', scale: 2.2 }, 0)
+            .to(this.tweenTarget, { duration: 0.5 });
           return;
         }
       }
     }
   };
 
+  private calcPlayerPieceStartPos(index: number):PIXI.Point {
+    const { width, height } = this.game.app.screen;
+    return new PIXI.Point(width * 0.037 + index * 119 + this.pieceRadius, height * 0.52 + this.pieceRadius);
+  };
+
   private moveDrag = () => {
     if (this.state === 'Playing' && this.subState === 'Dragging_Piece') {
       this.pieceSprites[this.dragPieceData.index].position.set(this.mousePos.x + this.dragPieceData.offset.x, this.mousePos.y + this.dragPieceData.offset.y);
+    }
+  };
+
+  private endDrag = () => {
+    if (this.state === 'Playing' && this.subState === 'Dragging_Piece') {
+      this.subState = 'Idle';
+      this.empties2.forEach(empty => empty.visible = false);
+      Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlSpotBlink');
+      const sprDrag = this.pieceSprites[this.dragPieceData.index];
+
+      if (this.dropTarget !== -1) {
+        // Drop the piece
+        this.groupPiecesLow.reparentChild(sprDrag);
+        sprDrag.scale.set(PIECE_SCALE);
+        sprDrag.filters = [];
+        this.empties2[this.dropTarget].toGlobal({ x: 0, y: 0 }, sprDrag.position);
+
+        const row = Math.floor(this.dropTarget / 3);
+        const col = this.dropTarget % 3;
+        this.gameState.setSlot(row, col, 'Player');
+
+        this.placedPieces[this.dragPieceData.index] = true;
+
+        this.bNextIsPlayer = !this.bNextIsPlayer;
+        this.animateTurnText();
+
+        this.bNoMovement = false;
+      } else {
+        // Travel the piece back to its original position
+        const ptTo = this.calcPlayerPieceStartPos(this.dragPieceData.index);
+        const travelTimelineName = `travel${this.dragPieceData.index}`;
+        const dx = ptTo.x - sprDrag.x;
+        const dy = ptTo.y - sprDrag.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const duration = Math.max(dist / 2_000, 0.05);
+        this.gsapTimelines[travelTimelineName] = gsap.timeline({ onComplete: () => {
+            this.groupPiecesLow.reparentChild(sprDrag);
+            sprDrag.scale.set(PIECE_SCALE);
+            sprDrag.filters = [];
+            Utils.destroyGsapTimeline(this.gsapTimelines, travelTimelineName);
+          }})
+          .to(sprDrag.position, { x: ptTo.x, y: ptTo.y, duration, ease: 'power2.out' });
+      }
     }
   };
 }

@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { DropShadowFilter } from 'pixi-filters';
 import { G_Fonts } from "./constants.ts";
-import {TButtonWithShadow} from "./types.ts";
+import { TButtonWithShadow } from "./types.ts";
 
 
 class Utils {
@@ -75,13 +75,16 @@ class Utils {
     return { container: btnContainer, button: buttonSprite, state };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static destroyGsapTimeline = (dynamics: { [x: string]: any; }, strTimeline: string) => {
-    if (dynamics[strTimeline]) {
-      dynamics[strTimeline].kill();
-      dynamics[strTimeline] = null;
-      delete dynamics[strTimeline];
+  static destroyGsapTimeline = (timelines: { [x: string]: gsap.core.Timeline; }, strTimeline: string) => {
+    if (strTimeline in timelines) {
+      timelines[strTimeline].kill();
+      delete timelines[strTimeline];
     }
+  };
+
+  static assert(condition: boolean, message?: string): asserts condition {
+    if (import.meta.env.VITE_ASSERT && !condition)
+      throw new Error(message || 'Assertion failed');
   };
 }
 

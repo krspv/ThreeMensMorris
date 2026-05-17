@@ -38,15 +38,36 @@ class DragPieceData {
     public index: number = -1,
     public mouseStart: PIXI.Point = new PIXI.Point(0, 0),
     public offset: PIXI.Point = new PIXI.Point(0, 0),
-    public spriteStartPos: PIXI.Point = new PIXI.Point(0, 0),
   ) {}
 };
+
+type Slot = 'Empty' | 'Player' | 'Enemy';
+
+class GameState {
+  public board: Slot[];
+
+  constructor() {
+    this.board = ['Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty'];
+  }
+
+  public reset(): void {
+    this.board = ['Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty'];
+  };
+
+  public getSlot = (row: number, col: number): Slot => this.board[3*row + col];
+  public setSlot = (row: number, col: number, value: Slot): void => { this.board[3*row + col] = value; };
+};
+
 
 
 export type {
   IGame,
   IGameScreen,
   TButtonWithShadow,
+  Slot,
 };
 
-export { DragPieceData };
+export {
+  DragPieceData,
+  GameState,
+};
