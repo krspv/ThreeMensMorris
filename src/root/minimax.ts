@@ -1,13 +1,14 @@
-import { Slot, Move, GameState } from "./types.ts";
+// import { Slot, Move, GameState } from "./types.ts";
 
 
 class Minimax {
+  /*
   private gameState: GameState;
 
   public get move() { return this.gameState.move; }
 
   constructor(gameState: GameState) {
-    this.gameState = gameState;
+    this.gameState = new GameState(gameState.board);
   }
 
   private countEmptySlots = (): number => {
@@ -56,7 +57,7 @@ class Minimax {
           const nextState = new GameState(this.gameState.board);
           nextState.setSlotIdx(i, actor);
           nextState.move = { type: 'Placement', from: -1, to: i };
-          if (nEmptySlots < 5 && nextState.isWinner(actor)) {
+          if (nEmptySlots < 6 && nextState.isWinner(actor)) {
             gsWinner = nextState;
             break;
           }
@@ -97,7 +98,11 @@ class Minimax {
         const mm = new Minimax(gs);
         const retPL = mm.ponder('Player');
         if (!(retPL instanceof GameState))
-          acc.push(mm);
+          for (const nextGs of retPL) {
+            const nextMM = new Minimax(nextGs);
+            nextMM.gameState.move = gs.move;
+            acc.push(nextMM);
+          }
         return acc;
       }, []);
 
@@ -112,13 +117,17 @@ class Minimax {
         const deep = mm.think(depth - 1);
         if (deep.winner === 'Cpu')
           return deep;
-        else if (deep.winner === 'Empty')
-          deeps.push(deep);
+        else if (deep.winner === 'Empty') {
+          const item = deeps.find(item => item.winner === 'Empty' && item.move.type === deep.move.type && item.move.from === deep.move.from && item.move.to === deep.move.to);
+          if (item == null)
+            deeps.push(deep);
+        }
       }
 
       return deeps[Math.floor(Math.random() * deeps.length)];
     }
   }
+*/
 }
 
 

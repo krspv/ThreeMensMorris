@@ -86,6 +86,14 @@ class Utils {
     if (import.meta.env.VITE_ASSERT && !condition)
       throw new Error(message || 'Assertion failed');
   };
+
+  static shuffle = <T>(arr: T[]): T[] => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
 }
 
 

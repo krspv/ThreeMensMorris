@@ -4,7 +4,6 @@ import gsap from "gsap";
 import { IGame, IGameScreen, TButtonWithShadow, DragPieceData, GameState } from "../types.ts";
 import { G_Fonts, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
-import Minimax from "../minimax.ts";
 
 
 const BOARD_SCALE = 0.85;
@@ -754,8 +753,43 @@ class ScrGame implements IGameScreen {
         this.animateTurnText();
         this.subState = 'CpuMove';
 
-        const cpuMove = new Minimax(this.gameState).think(4);
-        console.log(cpuMove);
+        let theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        console.log(theMove);
+        /*
+        this.gameState.board[theMove.to] = 'Cpu';
+        console.log(this.gameState.board);
+        this.gameState.board[0] = 'Player';
+        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        this.gameState.board[theMove.to] = 'Cpu';
+        console.log(this.gameState.board);
+        this.gameState.board[2] = 'Player';
+        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        this.gameState.board[theMove.to] = 'Cpu';
+        console.log(this.gameState.board);
+        this.gameState.board[2] = 'Empty';
+        this.gameState.board[5] = 'Player';
+        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        console.log(theMove);
+        console.log(this.gameState.board);
+
+        /*
+        theMove = this.gameState.miniMax(7, -999, 999, 'Player');
+        this.gameState.board[theMove.to] = 'Player';
+        //console.log(playerMove);
+        console.log(this.gameState.board);
+        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        this.gameState.board[theMove.to] = 'Cpu';
+        //console.log(cpuMove);
+        console.log(this.gameState.board);
+        theMove = this.gameState.miniMax(7, -999, 999, 'Player');
+        this.gameState.board[theMove.to] = 'Player';
+        //console.log(playerMove);
+        console.log(this.gameState.board);
+        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
+        this.gameState.board[theMove.to] = 'Cpu';
+        //console.log(cpuMove);
+        console.log(this.gameState.board);
+        */
       } else {
         // Travel the piece back to its original position
         const ptTo = this.calcPlayerPieceStartPos(this.dragPieceData.index);
