@@ -106,8 +106,9 @@ class ScrLoader implements IGameScreen {
     PIXI.Assets.add({ alias: G_Sound.BkMusic01, src: 'sound/bk-music-01.aac' });
     PIXI.Assets.add({ alias: G_Sound.BkMusic02, src: 'sound/bk-music-02.aac' });
     PIXI.Assets.add({ alias: G_Sound.ButtonClick, src: 'sound/button-click.aac' });
+    PIXI.Assets.add({ alias: G_Sound.PieceDrop, src: 'sound/piece-drop.aac' });
 
-    const allAliases = [G_Tex.Atlas, G_Tex.Dialog, G_Sound.BkMusic01, G_Sound.BkMusic02, G_Sound.ButtonClick];
+    const allAliases = [G_Tex.Atlas, G_Tex.Dialog, G_Sound.BkMusic01, G_Sound.BkMusic02, G_Sound.ButtonClick, G_Sound.PieceDrop];
     PIXI.Assets.load(allAliases, this.onProgress);
   };
 
@@ -131,6 +132,7 @@ class ScrLoader implements IGameScreen {
         this.game.sound[G_Sound.BkMusic01].volume(.6, id);
       });
       this.game.sound[G_Sound.ButtonClick] = PIXI.Assets.get(G_Sound.ButtonClick) as Howl;
+      this.game.sound[G_Sound.PieceDrop] = PIXI.Assets.get(G_Sound.PieceDrop) as Howl;
 
       // Create the start button
       this.btnStart = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Start' });

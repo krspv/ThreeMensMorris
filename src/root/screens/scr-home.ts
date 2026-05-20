@@ -108,7 +108,7 @@ class ScrHome implements IGameScreen {
         angle: 1,
         blur: 9,
         distance: 3,
-        color: '#ee9933',
+        color: '#77AE1E',
       },
       fill: '#0a0a85',
       fontFamily: G_Fonts.Gradzy,
@@ -141,9 +141,9 @@ class ScrHome implements IGameScreen {
         angle: 1,
         blur: 9,
         distance: 3,
-        color: '#c4e888',
+        color: '#77AE1E',
       },
-      fill: '#264202',
+      fill: '#192B02',
       fontFamily: G_Fonts.Gradzy,
       fontSize: 28,
       fontWeight: '700',
@@ -318,7 +318,7 @@ class ScrHome implements IGameScreen {
       this.btnPlay.state.disabled = true;
 
       const { width, height } = this.game.app.screen;
-      this.sprPirate.position.set(width * 1.5, height * 0.5);
+      this.sprPirate.position.set(width * 1.5, height * 0.52);
       this.rulesBubble.clear();
       const bubbleData = { height: 50 };
       this.sprMiniature.visible = false;
@@ -347,7 +347,7 @@ class ScrHome implements IGameScreen {
         .to(this.txtTitle, { y: -80, duration: .8, delay: .15, ease: 'power2.inout' })
         .to(this.btnRules.container, { y: (0.5 + 1) * height, duration: .75, ease: 'power2.inout' }, .2)
         .to(this.btnPlay.container, { y: (0.8 + 1) * height, duration: .75, ease: 'power2.inout' }, .2)
-        .to(this.sprPirate, { x: width * 0.76, duration: 1, ease: 'power2.out' }, .5)
+        .to(this.sprPirate, { x: width * 0.75, duration: 1, ease: 'power2.out' }, .5)
         .to(bubbleData, {
           height: 864,
           duration: .6,
@@ -355,7 +355,7 @@ class ScrHome implements IGameScreen {
           onUpdate: () => {
             this.rulesBubble
               .clear()
-              .setFillStyle({ color: '#BDBD63' })
+              .setFillStyle({ color: '#EDD973', alpha: .6 })
               .setStrokeStyle({ width: 20, color: '#A61D1D' })
               .roundRect(40, 40, 800, bubbleData.height, 25)
               .fill()

@@ -1,8 +1,9 @@
 import * as PIXI from "pixi.js";
 import { GlowFilter, DropShadowFilter } from 'pixi-filters';
 import gsap from "gsap";
-import { IGame, IGameScreen, TButtonWithShadow, DragPieceData, GameState } from "../types.ts";
-import { G_Fonts, G_Tex } from "../constants.ts";
+import GameState from "../game-state.ts";
+import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from "../types.ts";
+import { G_Fonts, G_Sound, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
 
 
@@ -10,7 +11,7 @@ const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 const DROP_DISTSQ = 2_900;
 type TState = 'ShowingUp' | 'Playing';
-type TSubState = 'Idle' | 'Dragging_Piece' | 'CpuMove';
+type TSubState = 'Idle' | 'Dragging_Piece' | 'CpuMove' | 'CpuMove_Animation' | 'Winner';
 
 
 class ScrGame implements IGameScreen {
@@ -34,7 +35,11 @@ class ScrGame implements IGameScreen {
   private tweenTarget = { alpha: 1, scale: 1 }; // For the empty slots
   private dropTarget: number = -1;
   private placedPieces: boolean[] = [];
+  private bAllPiecesPlaced: boolean = false;
+  private bCanFadePiecesGroup: boolean = false;
   private gsapTimelines: Record<string, gsap.core.Timeline> = {};
+  private winPositions: number[] | undefined = undefined;
+  private winner: 'Player' | 'Cpu' = 'Player';
   // Rendering data
   private readonly mainContainer: PIXI.Container;
   private readonly board: PIXI.Container;
@@ -200,6 +205,8 @@ class ScrGame implements IGameScreen {
       this.pieceSprites[i].interactive = true;
       this.pieceSprites[i].hitArea = new PIXI.Circle(0, 0, this.game.atlas.textures[G_Tex.PlayerPiece].width * 0.5);
     }
+    for (let i = 3; i < 6; i++)
+      this.pieceSprites[i].anchor.set(0.5);
 
     this.pieceDropShadowFilter = new DropShadowFilter({
       blur: 4,           // blur strength (like CSS blur radius)
@@ -493,7 +500,7 @@ class ScrGame implements IGameScreen {
       this.groupPiecesLow.addChild(this.pieceSprites[i]);
       const k = i + 3;
       this.pieceSprites[k].scale.set(PIECE_SCALE);
-      this.pieceSprites[k].position.set(width * 0.037 + i * 119, height * 0.79);
+      this.pieceSprites[k].position.set(this.pieceSprites[i].x, this.pieceSprites[i].y + 250);
       this.pieceSprites[k].visible = false;
       this.groupPiecesLow.addChild(this.pieceSprites[k]);
     }
@@ -551,11 +558,16 @@ class ScrGame implements IGameScreen {
     }
 
     let deltaAlpha: number;
-    if (this.state === 'Playing' && this.subState === 'Idle' && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
+    if (this.state === 'Playing' && this.subState === 'Idle' && !this.placedPieces[5] && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
       deltaAlpha = ticker.elapsedMS * 0.001;
     else
-      deltaAlpha= -ticker.elapsedMS * 0.003;
+      deltaAlpha = -ticker.elapsedMS * 0.003;
     this.txtDontTouch.alpha = Utils.clamp(this.txtDontTouch.alpha + deltaAlpha, 0, 1);
+
+    if (this.bCanFadePiecesGroup && this.groupPieceBoxes.alpha > 0) {
+      const speedFactor = this.subState === 'Winner' ? 0.01 : 0.00072;
+      this.groupPieceBoxes.alpha = Utils.clamp(this.groupPieceBoxes.alpha - ticker.elapsedMS * speedFactor, 0, 1);
+    }
 
     if (this.state === 'Playing' && this.subState === 'Dragging_Piece') {
       // Find a drop target
@@ -584,6 +596,55 @@ class ScrGame implements IGameScreen {
         }
       });
     }
+
+    if (this.state === 'Playing' && this.subState === 'CpuMove') {
+      const theMove = this.gameState.miniMax(9, -999, 999, 'Cpu');
+      this.subState = 'CpuMove_Animation';
+
+      if (theMove.type === 'Placement') {
+        // Grab the next available piece
+        let i = 3;
+        while (this.placedPieces[i]) ++i;
+        this.placedPieces[i] = true;
+        const sprMove = this.pieceSprites[i];
+        this.bAllPiecesPlaced = this.placedPieces.every(v => v);
+
+        // Move it on top
+        if (sprMove.parent !== this.groupPiecesHigh)
+          this.groupPiecesHigh.reparentChild(sprMove);
+
+        // Pick it up
+        sprMove.scale.set(PIECE_SCALE * 1.2);
+        sprMove.filters = [this.pieceDropShadowFilter];
+
+        // Move the piece
+        const targetPt: PIXI.Point = this.empties2[theMove.to].toGlobal({ x: 0, y: 0 });
+        const dx = sprMove.x - targetPt.x;
+        const dy = sprMove.y - targetPt.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const duration = Math.max(dist / 800, 0.05);
+        this.gsapTimelines.tmlMove = gsap.timeline({ onComplete: () => {
+            Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlMove');
+
+            this.game.sound[G_Sound.PieceDrop].play();
+
+            if (this.bAllPiecesPlaced)
+              this.bCanFadePiecesGroup = true;
+
+            this.groupPiecesLow.reparentChild(sprMove);
+            this.pieceSprites[i].scale.set(PIECE_SCALE);
+            this.pieceSprites[i].filters = [];
+            sprMove.position.set(targetPt.x, targetPt.y);
+
+            this.gameState.setSlotIdx(theMove.to, 'Cpu');
+
+            this.estimateWinState('Cpu');
+          }})
+          .to(this.pieceSprites[i].position, { x: targetPt.x, y: targetPt.y, duration, ease: 'power2.inout' });
+      } else {
+
+      }
+    }
   }
 
   onDismiss(): void {
@@ -611,7 +672,9 @@ class ScrGame implements IGameScreen {
 
     this.subState = 'Idle';
     this.gameState.reset();
-    this.placedPieces = [false, false, false];
+    this.placedPieces = [false, false, false, false, false, false];
+    this.bAllPiecesPlaced = false;
+    this.bCanFadePiecesGroup = false;
   };
 
   private animateTurnText = () => {
@@ -620,7 +683,13 @@ class ScrGame implements IGameScreen {
     const { height } = this.game.app.screen;
 
     this.txtTurn.visible = true;
-    this.txtTurn.text = this.bNextIsPlayer ? 'Your Turn' : "Opponent's Turn";
+    if (this.subState === 'Winner') {
+      this.txtTurn.text = this.winner === 'Player' ? 'You Won!' : 'You Lost!';
+      this.txtTurn.tint = this.winner === 'Player' ? 0xBBFFBB : 0xFFBBBB;
+    } else {
+      this.txtTurn.text = this.bNextIsPlayer ? 'Your Turn' : "Opponent's Turn";
+      this.txtTurn.tint = 0xFFFFFF;
+    }
     this.txtTurn.alpha = 0;
     this.txtTurn.y = height * 0.18 + 20;
     this.txtTurn.scale.set(1);
@@ -698,8 +767,9 @@ class ScrGame implements IGameScreen {
           this.dragPieceData.index = i;
           this.dragPieceData.mouseStart = this.mousePos.clone();
           this.dragPieceData.offset.set(dx, dy);
+          const bBoardEmpty = this.gameState.emptySlotCount === 9;
           this.empties2.forEach((empty, idx) => {
-            if (this.gameState.board[idx] === 'Empty') {
+            if (this.gameState.board[idx] === 'Empty' && (idx !== 4 || !bBoardEmpty)) { // Cannot place a piece in the center slot if the board is empty
               empty.visible = true;
               empty.alpha = 1;
               empty.scale = 1;
@@ -747,49 +817,12 @@ class ScrGame implements IGameScreen {
         this.gameState.setSlot(row, col, 'Player');
 
         this.placedPieces[this.dragPieceData.index] = true;
+        this.bAllPiecesPlaced = this.placedPieces.every(v => v);
+
+        this.game.sound[G_Sound.PieceDrop].play();
 
         this.bNoMovement = false;
-        this.bNextIsPlayer = !this.bNextIsPlayer;
-        this.animateTurnText();
-        this.subState = 'CpuMove';
-
-        let theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        console.log(theMove);
-        /*
-        this.gameState.board[theMove.to] = 'Cpu';
-        console.log(this.gameState.board);
-        this.gameState.board[0] = 'Player';
-        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        this.gameState.board[theMove.to] = 'Cpu';
-        console.log(this.gameState.board);
-        this.gameState.board[2] = 'Player';
-        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        this.gameState.board[theMove.to] = 'Cpu';
-        console.log(this.gameState.board);
-        this.gameState.board[2] = 'Empty';
-        this.gameState.board[5] = 'Player';
-        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        console.log(theMove);
-        console.log(this.gameState.board);
-
-        /*
-        theMove = this.gameState.miniMax(7, -999, 999, 'Player');
-        this.gameState.board[theMove.to] = 'Player';
-        //console.log(playerMove);
-        console.log(this.gameState.board);
-        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        this.gameState.board[theMove.to] = 'Cpu';
-        //console.log(cpuMove);
-        console.log(this.gameState.board);
-        theMove = this.gameState.miniMax(7, -999, 999, 'Player');
-        this.gameState.board[theMove.to] = 'Player';
-        //console.log(playerMove);
-        console.log(this.gameState.board);
-        theMove = this.gameState.miniMax(7, -999, 999, 'Cpu');
-        this.gameState.board[theMove.to] = 'Cpu';
-        //console.log(cpuMove);
-        console.log(this.gameState.board);
-        */
+        this.estimateWinState('Player');
       } else {
         // Travel the piece back to its original position
         const ptTo = this.calcPlayerPieceStartPos(this.dragPieceData.index);
@@ -808,6 +841,19 @@ class ScrGame implements IGameScreen {
       }
     }
   };
+
+  private estimateWinState = (lastMoveActor: 'Player' | 'Cpu') => {
+    this.winPositions = this.gameState.getWinnerPositions(lastMoveActor);
+    if (this.winPositions !== undefined) {
+      this.subState = 'Winner';
+      this.winner = lastMoveActor;
+    } else {
+      this.bNextIsPlayer = !this.bNextIsPlayer;
+      this.subState = (lastMoveActor === 'Cpu') ? 'Idle' : 'CpuMove';
+    }
+    this.animateTurnText();
+  };
 }
+
 
 export default ScrGame;
