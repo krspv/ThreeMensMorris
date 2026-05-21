@@ -2,6 +2,7 @@ import * as PIXI from "pixi.js";
 import { GlowFilter, DropShadowFilter } from 'pixi-filters';
 import gsap from "gsap";
 import GameState from "../game-state.ts";
+import ConfettiSystem from "../confetti-system.ts";
 import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from "../types.ts";
 import { G_Fonts, G_Sound, G_Tex } from "../constants.ts";
 import Utils from "../utils.ts";
@@ -20,7 +21,6 @@ class ScrGame implements IGameScreen {
   private state!: TState;
   private readonly bTouchDevice: boolean;
   private readonly pieceRadius: number;
-  // private tmpGrfx: PIXI.Graphics;
   private readonly rcOpponentPieces: PIXI.Rectangle;
   // Game data
   private playerHasFirstMove!: boolean;
@@ -63,6 +63,7 @@ class ScrGame implements IGameScreen {
   // Groups for reparenting pieces, so that the dragged piece is always on top of other pieces
   private readonly groupPiecesLow: PIXI.Container;
   private readonly groupPiecesHigh: PIXI.Container;
+  private readonly confettiSystem: ConfettiSystem;
 
   constructor(game: IGame) {
     this.bTouchDevice = Utils.isTouchDevice();
@@ -217,6 +218,7 @@ class ScrGame implements IGameScreen {
 
     this.groupPiecesLow = new PIXI.Container();
     this.groupPiecesHigh = new PIXI.Container();
+    this.confettiSystem = new ConfettiSystem(game);
 
     this.rcOpponentPieces = new PIXI.Rectangle(40, 700, 385, 180);
 
@@ -492,6 +494,7 @@ class ScrGame implements IGameScreen {
     this.txtDontTouch.alpha = 0;
     this.mainContainer.addChild(this.txtDontTouch);
     this.mainContainer.addChild(this.groupPiecesHigh);
+    this.mainContainer.addChild(this.confettiSystem.group);
 
     for (let i = 0; i < 3; i++) {
       this.pieceSprites[i].scale.set(PIECE_SCALE);
@@ -532,9 +535,6 @@ class ScrGame implements IGameScreen {
       document.addEventListener('touchend', this.onDocTouchEnd, { capture: true, passive: true });
       document.addEventListener('touchcancel', this.onDocTouchEnd, { capture: true, passive: true });
     }
-
-    // this.tmpGrfx = new PIXI.Graphics();
-    // this.mainContainer.addChild(this.tmpGrfx);
   }
 
   onUpdate(ticker: PIXI.Ticker): void {
@@ -645,12 +645,17 @@ class ScrGame implements IGameScreen {
 
       }
     }
+
+    this.confettiSystem.update(ticker);
   }
 
   onDismiss(): void {
     for (const key of Object.keys(this.gsapTimelines))
       Utils.destroyGsapTimeline(this.gsapTimelines, key);
 
+    this.groupPiecesLow.removeChildren();
+    this.groupPiecesHigh.removeChildren();
+    this.confettiSystem.destroy();
     this.mainContainer.removeChildren();
     this.game.app.stage.removeChild(this.mainContainer);
   }
@@ -722,6 +727,7 @@ class ScrGame implements IGameScreen {
   private onDocMouseDown = (evt: MouseEvent) => {
     this.saveMousePos(evt.clientX, evt.clientY);
     this.startDrag();
+    this.confettiSystem.fire();
   };
 
   private onDocMouseMove = (evt: MouseEvent) => {
