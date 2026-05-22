@@ -34,6 +34,8 @@ export const G_Sound = {
   BkMusic02: 'BackgroundMusic02',
   ButtonClick: 'ButtonClick',
   PieceDrop: 'PieceDrop',
+  PieceMove: 'PieceMove',
+  GameLost: 'GameLost',
 } as const;
 
 export const G_Description = {

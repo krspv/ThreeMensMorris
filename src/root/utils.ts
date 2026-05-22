@@ -98,6 +98,21 @@ class Utils {
   static randomFrom<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
   };
+
+  static distSq = (pt1: PIXI.Point, pt2: PIXI.Point) => {
+    const dx = pt2.x - pt1.x;
+    const dy = pt2.y - pt1.y;
+    return dx * dx + dy * dy;
+  };
+
+  static closestPointOnSection = (pt1: PIXI.Point, pt2: PIXI.Point, itemPos: PIXI.Point): PIXI.Point => {
+    const dx = pt2.x - pt1.x;
+    const dy = pt2.y - pt1.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq < 0.01) return pt1.clone();
+    const t = Utils.clamp(((itemPos.x - pt1.x) * dx + (itemPos.y - pt1.y) * dy) / lenSq, 0, 1);
+    return new PIXI.Point(pt1.x + dx * t, pt1.y + dy * t);
+  };
 }
 
 
