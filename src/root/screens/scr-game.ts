@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import GameState, { Move } from '../game-state.ts';
 import ConfettiSystem from '../confetti-system.ts';
 import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from '../types.ts';
-import { G_Fonts, G_Sound, G_Tex } from '../constants.ts';
+import { G_Fonts, G_Screens, G_Sound, G_Tex } from '../constants.ts';
 import Utils from '../utils.ts';
 
 
@@ -12,7 +12,7 @@ const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 const DROP_DISTSQ = 2_900;
 const MOVE_DISTSQ = 15_000;
-type TState = 'ShowingUp' | 'Playing' | 'To_Winner' | 'Winner';
+type TState = 'ShowingUp' | 'Playing' | 'To_Winner' | 'Winner' | 'To_Playing' | 'Quitting';
 type TSubState = 'Idle' | 'Dragging_Piece' | 'Moving_Piece' | 'CpuMove' | 'CpuMove_Animation' | 'Init_To_Winner';
 
 
@@ -173,8 +173,8 @@ class ScrGame implements IGameScreen {
 
     this.btnQuit = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Quit' });
     this.btnQuit.container.position.set(width * 0.893, height * 0.88);
-    this.btnQuit.button.on('click', this.onButQuitClick);
-    this.btnQuit.button.on('tap', this.onButQuitClick);
+    this.btnQuit.button.on('click', this.onBtnQuitClick);
+    this.btnQuit.button.on('tap', this.onBtnQuitClick);
 
     this.btnPlayAgain = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Play Again', fontSize: 48 });
     this.btnPlayAgain.container.position.set(width * 0.15, height * 0.88);
@@ -243,14 +243,12 @@ class ScrGame implements IGameScreen {
       anchor: 0.5,
       visible: false,
       position: { x: width * 0.15, y: height * 0.45} });
-    this.mainContainer.addChild(this.sadPirate);
 
     this.happyPirate = new PIXI.Sprite({
       texture: game.atlas.textures[G_Tex.HappyPirate],
       anchor: 0.5,
       visible: false,
       position: { x: width * 0.15, y: height * 0.4} });
-    this.mainContainer.addChild(this.happyPirate);
   }
 
   private createThePieceBoxesGroup = () => {
@@ -485,6 +483,10 @@ class ScrGame implements IGameScreen {
   };
 
   onStage(): void {
+    this.mainContainer.position.set(0, 0);
+    this.lines.forEach(line => line.tint = 0xFFFFFF);
+    this.pieceSprites.forEach(piece => piece.filters = []);
+
     this.game.app.stage.addChild(this.mainContainer);
 
     this.mainContainer.addChild(this.board);
@@ -521,6 +523,11 @@ class ScrGame implements IGameScreen {
     this.groupHint.visible = false;
     this.mainContainer.addChild(this.groupHint);
 
+    this.sadPirate.visible = false;
+    this.mainContainer.addChild(this.sadPirate);
+    this.happyPirate.visible = false;
+    this.mainContainer.addChild(this.happyPirate);
+
     this.mainContainer.addChild(this.groupPiecesLow);
     this.txtDontTouch.alpha = 0;
     this.mainContainer.addChild(this.txtDontTouch);
@@ -547,6 +554,7 @@ class ScrGame implements IGameScreen {
         Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShow');
 
         this.state = 'Playing';
+        this.btnQuit.container.alpha = 1;
         this.btnQuit.state.disabled = false;
         this.newGame();
 
@@ -579,7 +587,7 @@ class ScrGame implements IGameScreen {
       .to(this.txtD.position, { y: '+=100', duration: .4, ease: 'power2.out' }, .1)
       .to([this.groupPieceBoxes, this.groupScore], { alpha: 1, duration: 1, ease: 'none' }, .1)
       .set(this.pieceSprites, { visible: true, stagger: 0.1 }, 1.1)
-      .to(this.btnQuit.container, { alpha: 1, duration: .3, ease: 'power2.out' }, .2)
+      .to(this.btnQuit.container, { alpha: .4, duration: .3, ease: 'power2.out' }, .2)
       .to(this.btnQuit.container, { scale: .8, duration: .6, ease: 'power3.out' }, .4);
 
     document.addEventListener('mousedown', this.onDocMouseDown, { capture: true, passive: true });
@@ -768,7 +776,6 @@ class ScrGame implements IGameScreen {
       }
       // Hide unplaced pieces
       this.placedPieces.forEach((val, idx) => this.pieceSprites[idx].visible = val);
-
       // Animate to 'Winner' state
       sprPirate.alpha = 0;
       sprPirate.visible = true;
@@ -778,13 +785,13 @@ class ScrGame implements IGameScreen {
       this.btnPlayAgain.state.disabled = true;
       this.gsapTimelines.tmlToWinner = gsap.timeline({ onComplete: () => {
           this.state = 'Winner';
+          this.btnPlayAgain.state.disabled = false;
         }})
         .to(txtScore.scale, { x: 1.3, y: 1.3, duration: .25, ease: 'power3.out' })
         .to(txtScore.scale, { x: 1, y: 1, duration: .25, ease: 'power3.in' })
-        .to(sprPirate, { alpha: 1, duration: 2, ease: 'power2.out' }, 0)
+        .to(sprPirate, { alpha: 1, duration: .7, ease: 'power2.out' }, 0)
         .to(this.btnPlayAgain.container, { alpha: 1, duration: .2, ease: 'power2.out' }, .2)
-        .to(this.btnPlayAgain.container, { scale: 1, duration: .4, ease: 'power3.out' }, .3)
-        .set(this.btnPlayAgain.state, { disabled: false }, .6);
+        .to(this.btnPlayAgain.container, { scale: 1, duration: .4, ease: 'power3.out' }, .3);
     }
     this.confettiSystem.update(ticker);
   }
@@ -815,7 +822,7 @@ class ScrGame implements IGameScreen {
     this.groupHint.visible = false;
     this.txtDontTouch.alpha = 0;
 
-    this.subState = 'Idle';
+    this.subState = this.bNextIsPlayer ? 'Idle' : 'CpuMove';
     this.gameState.reset();
     this.placedPieces = [false, false, false, false, false, false];
     this.piecePositions = [-1, -1, -1, -1, -1, -1];
@@ -849,9 +856,26 @@ class ScrGame implements IGameScreen {
     this.gsapTimelines.tmlTurn.timeScale(3);
   };
 
-  private onButQuitClick = () => {
-    if (this.state === 'Playing') {
-      console.log('Quit');
+  private onBtnQuitClick = () => {
+    if (this.state === 'Playing' || this.state === 'Winner') {
+      // Split the stage
+      for (const key of Object.keys(this.gsapTimelines))
+        Utils.destroyGsapTimeline(this.gsapTimelines, key);
+
+      this.state = 'Quitting';
+
+      const right = new PIXI.Container();
+      this.game.app.stage.addChild(right);
+      right.reparentChild(this.groupScore);
+      right.reparentChild(this.btnQuit.container);
+
+      this.gsapTimelines.splitStage = gsap.timeline({ onComplete: () => {
+          Utils.destroyGsapTimeline(this.gsapTimelines, 'splitStage');
+          right.removeChildren();
+          this.game.setScreen(G_Screens.Home);
+      }})
+        .to(this.mainContainer.position, { x: -1350, duration: .7, ease: 'power2.out' })
+        .to(right, { x: 400, duration: .6, ease: 'power2.out' }, 0);
     }
   };
 
@@ -859,7 +883,33 @@ class ScrGame implements IGameScreen {
     if (this.state === 'Winner') {
       Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToWinner'); // In case it's still running
 
-      this.newGame();
+      this.pieceSprites.forEach(piece => {
+        piece.filters = [];
+        piece.visible = true;
+      });
+      this.lines.forEach(line => line.tint = 0xFFFFFF);
+
+      this.state = 'To_Playing';
+      const sprPirate = this.winner === 'Player' ? this.happyPirate : this.sadPirate;
+      this.btnQuit.state.disabled = true;
+      this.btnQuit.container.alpha = 0.2;
+      this.gsapTimelines.tmlPlayAgain = gsap.timeline({ onComplete: () => {
+          Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlPlayAgain');
+          this.state = 'Playing';
+          this.btnQuit.state.disabled = false;
+          this.btnQuit.container.alpha = 1;
+          sprPirate.visible = false;
+          this.newGame();
+        }})
+        .to(sprPirate, { alpha: 0, duration: .5, ease: 'power2.out' })
+        .to(this.groupPieceBoxes, { alpha: 1, duration: .5, ease: 'none' }, .1)
+        .to(this.btnPlayAgain.container, { alpha: 0, duration: .5, ease: 'none'}, 0)
+        .to(this.btnPlayAgain.container.scale, { x: 0.01, y: 0.01, duration: 0.45, ease: 'power2.out'}, 0);
+      for (let i = 0; i < this.pieceSprites.length; ++i) {
+        const targetPos = this.calcPlayerPieceStartPos(i % 3);
+        if (i > 2) targetPos.y += 250;
+        this.gsapTimelines.tmlPlayAgain.to(this.pieceSprites[i].position, { x: targetPos.x, y: targetPos.y, duration: 0.5, ease: 'power2.out' }, i*0.1);
+      }
     }
   };
 

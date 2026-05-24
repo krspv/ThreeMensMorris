@@ -244,40 +244,70 @@ class ScrHome implements IGameScreen {
         const id = this.game.sound[G_Sound.BkMusic01].play();
         this.game.sound[G_Sound.BkMusic01].volume(.6, id);
       }
+
+      this.game.app.stage.addChild(this.mainContainer);
+      this.btnRules.container.alpha = 0;
+      this.btnRules.container.scale = .1;
+      this.btnRules.state.disabled = true;
+      this.mainContainer.addChild(this.btnRules.container);
+      this.btnPlay.container.alpha = 0;
+      this.btnPlay.container.scale = .1;
+      this.btnPlay.state.disabled = true;
+      this.mainContainer.addChild(this.btnPlay.container);
+      this.groupDialog.visible = false;
+      this.mainContainer.addChild(this.groupDialog);
+      this.btnBack.container.visible = false;
+      this.mainContainer.addChild(this.btnBack.container);
+      this.txtTitle.alpha = 0;
+      this.mainContainer.addChild(this.txtTitle);
+      this.state = 'ShowingUp';
+
+      this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
+          this.state = 'Regular';
+          Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
+          this.btnRules.state.disabled = false;
+          this.btnPlay.state.disabled = false;
+          if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
+            this.game.setScreen(G_Screens.Game);
+      }});
+      this.dynamics.tmlShow.to(this.txtTitle, { alpha: 1, duration: 1.7, ease: 'power2.out' });
+      this.dynamics.tmlShow.to(this.btnRules.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .5);
+      this.dynamics.tmlShow.to(this.btnRules.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .5);
+      this.dynamics.tmlShow.to(this.btnPlay.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .75);
+      this.dynamics.tmlShow.to(this.btnPlay.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .75);
+      if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
+        this.dynamics.tmlShow.timeScale(10);
+    } else {
+      const { height } = this.game.app.screen;
+      this.game.app.stage.addChild(this.mainContainer);
+      this.btnRules.state.disabled = true;
+      this.btnRules.container.visible = true;
+      this.btnRules.container.y = (1 + 0.5) * height;
+      this.btnRules.container.scale = 1;
+      this.mainContainer.addChild(this.btnRules.container);
+      this.btnPlay.container.visible = true;
+      this.btnPlay.state.disabled = true;
+      this.btnPlay.container.y = (1 + 0.8) * height;
+      this.btnPlay.container.scale = 1;
+      this.mainContainer.addChild(this.btnPlay.container);
+      this.groupDialog.visible = false;
+      this.mainContainer.addChild(this.groupDialog);
+      this.btnBack.container.visible = false;
+      this.mainContainer.addChild(this.btnBack.container);
+      this.mainContainer.addChild(this.txtTitle);
+      this.state = 'ShowingUp';
+
+      this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
+          Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
+
+          this.state = 'Regular';
+          this.btnRules.state.disabled = false;
+          this.btnPlay.state.disabled = false;
+        }})
+        .to(this.txtTitle, { y: height * 0.14, duration: .4, ease: 'power2.out' })
+        .to(this.btnRules.container, { y: height * 0.5, duration: .35, ease: 'power2.inout' }, .1)
+        .to(this.btnPlay.container, { y: height * 0.8, duration: .35, ease: 'power2.inout' }, .1);
     }
-
-    this.game.app.stage.addChild(this.mainContainer);
-    this.btnRules.container.alpha = 0;
-    this.btnRules.container.scale = .1;
-    this.btnRules.state.disabled = true;
-    this.mainContainer.addChild(this.btnRules.container);
-    this.btnPlay.container.alpha = 0;
-    this.btnPlay.container.scale = .1;
-    this.btnPlay.state.disabled = true;
-    this.mainContainer.addChild(this.btnPlay.container);
-    this.groupDialog.visible = false;
-    this.mainContainer.addChild(this.groupDialog);
-    this.btnBack.container.visible = false;
-    this.mainContainer.addChild(this.btnBack.container);
-    this.txtTitle.alpha = 0;
-    this.mainContainer.addChild(this.txtTitle);
-    this.state = 'ShowingUp';
-
-    this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
-        this.state = 'Regular';
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
-        this.btnRules.state.disabled = false;
-        this.btnPlay.state.disabled = false;
-        if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
-          this.game.setScreen(G_Screens.Game);
-    }});
-    this.dynamics.tmlShow.to(this.txtTitle, { alpha: 1, duration: 1.7, ease: 'power2.out' });
-    this.dynamics.tmlShow.to(this.btnRules.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .5);
-    this.dynamics.tmlShow.to(this.btnRules.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .5);
-    this.dynamics.tmlShow.to(this.btnPlay.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .75);
-    this.dynamics.tmlShow.to(this.btnPlay.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .75);
-    if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
-      this.dynamics.tmlShow.timeScale(10);
   }
 
   onUpdate(/*ticker: Ticker*/): void {
