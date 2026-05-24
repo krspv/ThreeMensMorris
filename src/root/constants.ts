@@ -27,6 +27,8 @@ export const G_Tex = {
   Line: 'line.png',
   Empty: 'empty.png',
   Dialog: 'dialog.png',
+  SadPirate: 'sad-pirate.png',
+  HappyPirate: 'happy-pirate.png',
 } as const;
 
 export const G_Sound = {
@@ -36,11 +38,12 @@ export const G_Sound = {
   PieceDrop: 'PieceDrop',
   PieceMove: 'PieceMove',
   GameLost: 'GameLost',
+  GameWon: 'GameWon',
 } as const;
 
 export const G_Description = {
   text01: "Three Men's Morris is an abstract strategy game played on a three-by-three board, and is similar to tic-tac-toe.\n\n" +
-    "The winner is the first player to align their three tokens on a line drawn on the board.",
+    'The winner is the first player to align their three tokens on a line drawn on the board.',
   text02: 'The game consists of two phases:',
   text03: 'I. Phase: Placing Tokens',
   text04: 'The board starts empty. Players take turns placing their tokens on the board.',

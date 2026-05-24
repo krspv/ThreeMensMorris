@@ -1,18 +1,19 @@
-import * as PIXI from "pixi.js";
+import * as PIXI from 'pixi.js';
 import { GlowFilter, DropShadowFilter } from 'pixi-filters';
-import gsap from "gsap";
-import GameState, { Move } from "../game-state.ts";
-import ConfettiSystem from "../confetti-system.ts";
-import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from "../types.ts";
-import { G_Fonts, G_Sound, G_Tex } from "../constants.ts";
-import Utils from "../utils.ts";
+import gsap from 'gsap';
+import GameState, { Move } from '../game-state.ts';
+import ConfettiSystem from '../confetti-system.ts';
+import { IGame, IGameScreen, TButtonWithShadow, DragPieceData } from '../types.ts';
+import { G_Fonts, G_Sound, G_Tex } from '../constants.ts';
+import Utils from '../utils.ts';
 
 
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 const DROP_DISTSQ = 2_900;
-type TState = 'ShowingUp' | 'Playing';
-type TSubState = 'Idle' | 'Dragging_Piece' | 'Moving_Piece' | 'CpuMove' | 'CpuMove_Animation' | 'Winner';
+const MOVE_DISTSQ = 15_000;
+type TState = 'ShowingUp' | 'Playing' | 'To_Winner' | 'Winner';
+type TSubState = 'Idle' | 'Dragging_Piece' | 'Moving_Piece' | 'CpuMove' | 'CpuMove_Animation' | 'Init_To_Winner';
 
 
 class ScrGame implements IGameScreen {
@@ -44,7 +45,6 @@ class ScrGame implements IGameScreen {
   private gsapTimelines: Record<string, gsap.core.Timeline> = {};
   private winPositions: number[] | undefined = undefined;
   private winner: 'Player' | 'Cpu' = 'Player';
-  private minimaxDepth: number = 0;
   // Rendering data
   private readonly mainContainer: PIXI.Container;
   private readonly board: PIXI.Container;
@@ -65,6 +65,9 @@ class ScrGame implements IGameScreen {
   private readonly groupHint: PIXI.Container;
   private readonly txtDontTouch: PIXI.Text;
   private readonly cmf: PIXI.ColorMatrixFilter;  // For glow on the dragged piece
+  private readonly sadPirate: PIXI.Sprite;
+  private readonly happyPirate: PIXI.Sprite;
+  private readonly btnPlayAgain: TButtonWithShadow;
   // Groups for reparenting pieces, so that the dragged piece is always on top of other pieces
   private readonly groupPiecesLow: PIXI.Container;
   private readonly groupPiecesHigh: PIXI.Container;
@@ -173,6 +176,11 @@ class ScrGame implements IGameScreen {
     this.btnQuit.button.on('click', this.onButQuitClick);
     this.btnQuit.button.on('tap', this.onButQuitClick);
 
+    this.btnPlayAgain = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Play Again', fontSize: 48 });
+    this.btnPlayAgain.container.position.set(width * 0.15, height * 0.88);
+    this.btnPlayAgain.button.on('click', this.onBtnPlayAgainClick);
+    this.btnPlayAgain.button.on('tap', this.onBtnPlayAgainClick);
+
     style = new PIXI.TextStyle({
       dropShadow: {
         alpha: 1,
@@ -229,6 +237,20 @@ class ScrGame implements IGameScreen {
 
     this.cmf = new PIXI.ColorMatrixFilter();
     this.cmf.brightness(1.1, false);
+
+    this.sadPirate = new PIXI.Sprite({
+      texture: game.atlas.textures[G_Tex.SadPirate],
+      anchor: 0.5,
+      visible: false,
+      position: { x: width * 0.15, y: height * 0.45} });
+    this.mainContainer.addChild(this.sadPirate);
+
+    this.happyPirate = new PIXI.Sprite({
+      texture: game.atlas.textures[G_Tex.HappyPirate],
+      anchor: 0.5,
+      visible: false,
+      position: { x: width * 0.15, y: height * 0.4} });
+    this.mainContainer.addChild(this.happyPirate);
   }
 
   private createThePieceBoxesGroup = () => {
@@ -478,7 +500,6 @@ class ScrGame implements IGameScreen {
     this.txtD.text = this.game.difficulty;
     this.txtD.position.set(width * 0.145, height * 0.05 - 100);
     this.mainContainer.addChild(this.txtD);
-    this.minimaxDepth = this.game.difficulty === 'Easy' ? 3 : (this.game.difficulty === 'Medium' ? 5 : 9);
 
     this.groupPieceBoxes.alpha = 0;
     this.groupScore.alpha = 0;
@@ -489,6 +510,10 @@ class ScrGame implements IGameScreen {
     this.btnQuit.container.scale = 0.01;
     this.btnQuit.state.disabled = true;
     this.mainContainer.addChild(this.btnQuit.container);
+
+    this.btnPlayAgain.container.visible = false;
+    this.btnPlayAgain.state.disabled = true;
+    this.mainContainer.addChild(this.btnPlayAgain.container);
 
     this.txtTurn.visible = false;
     this.mainContainer.addChild(this.txtTurn);
@@ -524,6 +549,31 @@ class ScrGame implements IGameScreen {
         this.state = 'Playing';
         this.btnQuit.state.disabled = false;
         this.newGame();
+
+        if (import.meta.env.VITE_STRAIGHT_TO_WIN === 'Player' || import.meta.env.VITE_STRAIGHT_TO_WIN === 'Cpu') {
+          setTimeout(() => {
+            const _W = import.meta.env.VITE_STRAIGHT_TO_WIN;
+            const _L = (_W === 'Player') ? 'Cpu' : 'Player';
+            this.state = 'To_Winner';
+            this.winner = _W;
+            this.subState = 'Init_To_Winner';
+            this.bCanFadePiecesGroup = true;
+            this.animateTurnText();
+            this.gameState.board = [_W, _W, _W, 'Empty', _L, 'Empty', 'Empty', 'Empty', _L];
+            this.placedPieces = [false, false, false, false, false, false];
+            let placement;
+            if (_W === 'Player') {
+              placement = [0, 1, 2, 3, 4];
+            } else {
+              placement = [3, 4, 5, 0, 1];
+            }
+            placement.forEach((place, idx) => {
+              this.placedPieces[place] = true;
+              const k = idx < 3 ? idx : (idx < 4 ? 4 : 8);
+              this.empties2[k].toGlobal({ x: 0, y: 0 }, this.pieceSprites[place]);
+            });
+          }, 50);
+        }
       }})
       .to(this.txtDifficulty.position, { y: '+=100', duration: .4, ease: 'power2.out' })
       .to(this.txtD.position, { y: '+=100', duration: .4, ease: 'power2.out' }, .1)
@@ -571,7 +621,7 @@ class ScrGame implements IGameScreen {
     this.txtDontTouch.alpha = Utils.clamp(this.txtDontTouch.alpha + deltaAlpha, 0, 1);
 
     if (this.bCanFadePiecesGroup && this.groupPieceBoxes.alpha > 0) {
-      const speedFactor = this.subState === 'Winner' ? 0.01 : 0.00072;
+      const speedFactor = this.state === 'To_Winner' ? 0.01 : 0.00072;
       this.groupPieceBoxes.alpha = Utils.clamp(this.groupPieceBoxes.alpha - ticker.elapsedMS * speedFactor, 0, 1);
     }
 
@@ -585,7 +635,8 @@ class ScrGame implements IGameScreen {
         if (this.empties2[i].visible) {
           const emptyGlobalPos = this.empties2[i].toGlobal({ x: 0, y: 0 });
           const distSq = Utils.distSq(emptyGlobalPos, sprDrag.position);
-          if (distSq < DROP_DISTSQ) {
+          const MIN_DISTSQ = this.subState === 'Dragging_Piece' ? DROP_DISTSQ : MOVE_DISTSQ;
+          if (distSq < MIN_DISTSQ) {
             this.dropTarget = i;
             if (bSetFilter) sprDrag.filters = [this.cmf, this.pieceDropShadowFilter];
             break;
@@ -603,7 +654,6 @@ class ScrGame implements IGameScreen {
     }
 
     if (this.state === 'Playing' && this.subState === 'CpuMove') {
-      Utils.assert(this.minimaxDepth > 0);
       const theMove = this.nextMove();
       this.subState = 'CpuMove_Animation';
 
@@ -674,6 +724,68 @@ class ScrGame implements IGameScreen {
       }
     }
 
+    if (this.state === 'To_Winner' && this.subState === 'Init_To_Winner') {
+      this.subState = 'Idle';
+      Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToWinner');
+      const winLineIndex = this.gameState.getWinnerLine(this.winner);
+      let txtScore: PIXI.Text, sprPirate: PIXI.Sprite;
+      if (this.winner === 'Cpu') {
+        // Play the lose sound
+        const idSnd = this.game.sound[G_Sound.GameLost].play();
+        this.game.sound[G_Sound.GameLost].volume(.6, idSnd);
+        // Update the score
+        this.score[1] += 1;
+        this.txtScoreOpponent.text = this.score[1].toString();
+        txtScore = this.txtScoreOpponent;
+
+        sprPirate = this.sadPirate;
+
+        // Highlight the pieces
+        for (let i = 3; i < 6; i++)
+          this.pieceSprites[i].filters = [
+            new GlowFilter({ distance: 60, outerStrength: 4, color: '#FF8888', alpha: 0.5 }),
+          ];
+        this.lines[winLineIndex].tint = 0xFFBABA;
+      } else {
+        // Play the win sound
+        const idSnd = this.game.sound[G_Sound.GameWon].play();
+        this.game.sound[G_Sound.GameWon].volume(.7, idSnd);
+        // Update the score
+        this.score[0] += 1;
+        this.txtScoreYou.text = this.score[0].toString();
+        txtScore = this.txtScoreYou;
+        // Fire confetti
+        this.confettiSystem.fire();
+
+        sprPirate = this.happyPirate;
+
+        // Highlight the pieces
+        for (let i = 0; i < 3; i++)
+          this.pieceSprites[i].filters = [
+            new GlowFilter({ distance: 60, outerStrength: 4, color: '#88CC88', alpha: 0.5 }),
+          ];
+        this.lines[winLineIndex].tint = 0xBAFFBA;
+      }
+      // Hide unplaced pieces
+      this.placedPieces.forEach((val, idx) => this.pieceSprites[idx].visible = val);
+
+      // Animate to 'Winner' state
+      sprPirate.alpha = 0;
+      sprPirate.visible = true;
+      this.btnPlayAgain.container.alpha = 0;
+      this.btnPlayAgain.container.scale = 0.01;
+      this.btnPlayAgain.container.visible = true;
+      this.btnPlayAgain.state.disabled = true;
+      this.gsapTimelines.tmlToWinner = gsap.timeline({ onComplete: () => {
+          this.state = 'Winner';
+        }})
+        .to(txtScore.scale, { x: 1.3, y: 1.3, duration: .25, ease: 'power3.out' })
+        .to(txtScore.scale, { x: 1, y: 1, duration: .25, ease: 'power3.in' })
+        .to(sprPirate, { alpha: 1, duration: 2, ease: 'power2.out' }, 0)
+        .to(this.btnPlayAgain.container, { alpha: 1, duration: .2, ease: 'power2.out' }, .2)
+        .to(this.btnPlayAgain.container, { scale: 1, duration: .4, ease: 'power3.out' }, .3)
+        .set(this.btnPlayAgain.state, { disabled: false }, .6);
+    }
     this.confettiSystem.update(ticker);
   }
 
@@ -717,7 +829,7 @@ class ScrGame implements IGameScreen {
     const { height } = this.game.app.screen;
 
     this.txtTurn.visible = true;
-    if (this.subState === 'Winner') {
+    if (this.state === 'To_Winner') {
       this.txtTurn.text = this.winner === 'Player' ? 'You Won!' : 'You Lost!';
       this.txtTurn.tint = this.winner === 'Player' ? 0xBBFFBB : 0xFFBBBB;
     } else {
@@ -740,6 +852,14 @@ class ScrGame implements IGameScreen {
   private onButQuitClick = () => {
     if (this.state === 'Playing') {
       console.log('Quit');
+    }
+  };
+
+  private onBtnPlayAgainClick = () => {
+    if (this.state === 'Winner') {
+      Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToWinner'); // In case it's still running
+
+      this.newGame();
     }
   };
 
@@ -960,12 +1080,10 @@ class ScrGame implements IGameScreen {
   private estimateWinState = (lastMoveActor: 'Player' | 'Cpu') => {
     this.winPositions = this.gameState.getWinnerPositions(lastMoveActor);
     if (this.winPositions !== undefined) {
-      this.subState = 'Winner';
+      this.state = 'To_Winner';
       this.winner = lastMoveActor;
-      if (this.winner === 'Cpu') {
-        const idSnd = this.game.sound[G_Sound.GameLost].play();
-        this.game.sound[G_Sound.GameLost].volume(.6, idSnd);
-      }
+      this.subState = 'Init_To_Winner';
+      this.bCanFadePiecesGroup = true;
     } else {
       if (lastMoveActor === 'Cpu' && this.bAllPiecesPlaced)
         this.determineAvailableMovesForActor('Player');
@@ -1007,15 +1125,25 @@ class ScrGame implements IGameScreen {
 
   private nextMove = ():Move => {
     let bMakeRandomMove = false;
+    let minimaxDepth = 0;
     switch (this.game.difficulty) {
-      case 'Easy': bMakeRandomMove = Math.random() < .37; break;
-      case 'Medium': bMakeRandomMove = Math.random() < .15; break;
-      case 'Hard': bMakeRandomMove = Math.random() < .001; break;
+      case 'Easy':
+        bMakeRandomMove = Math.random() < .37;
+        minimaxDepth = 3;
+        break;
+      case 'Medium':
+        bMakeRandomMove = Math.random() < .15;
+        minimaxDepth = 5;
+        break;
+      case 'Hard':
+        bMakeRandomMove = Math.random() < .001;
+        minimaxDepth = 9;
+        break;
     }
 
     return bMakeRandomMove
       ? this.gameState.randomMove()
-      : this.gameState.miniMax(this.minimaxDepth, -999, 999, 'Cpu');
+      : this.gameState.miniMax(minimaxDepth, -999, 999, 'Cpu');
   };
 }
 

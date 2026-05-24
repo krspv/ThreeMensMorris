@@ -1,7 +1,7 @@
-import * as PIXI from "pixi.js";
-import { IGame } from "./types.ts";
-import { G_BaseSize } from "./constants.ts";
-import Utils from "./utils.ts";
+import * as PIXI from 'pixi.js';
+import { IGame } from './types.ts';
+import { G_BaseSize } from './constants.ts';
+import Utils from './utils.ts';
 
 
 const Tints = ['0xFF0000', '0x00FF00', '0x0000FF', '0xFF00FF', '0xFFFF00', '0xFF8800', '0x00FFFF'];

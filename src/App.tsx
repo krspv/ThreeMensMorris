@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import { Application, useApplication } from '@pixi/react';
-import * as WebFont from "webfontloader";
-import Game from "./root/game.ts";
-// import ReactOverlay from "./ReactOverlay";
-import { G_BaseSize, G_Fonts } from "./root/constants.ts";
+import * as WebFont from 'webfontloader';
+import Game from './root/game.ts';
+// import ReactOverlay from './ReactOverlay';
+import { G_BaseSize, G_Fonts } from './root/constants.ts';
 import styles from './styles.module.scss';
 
 

@@ -32,6 +32,7 @@ export default tseslint.config(
       ],
       "prettier/prettier": "off",
       "semi": ["error", "always"],      // Redundant but extra safety
+      "quotes": ["error", "single", { avoidEscape: true }],
     },
   },
 );

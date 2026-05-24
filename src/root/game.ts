@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { Howl } from 'howler';
 import { IGame, IGameScreen } from './types.ts';
-import ScrLoader from "./screens/scr-loader.ts";
-import { G_Screens } from "./constants.ts";
+import ScrLoader from './screens/scr-loader.ts';
+import { G_Screens } from './constants.ts';
 
 
 

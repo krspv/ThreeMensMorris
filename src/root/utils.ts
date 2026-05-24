@@ -1,7 +1,7 @@
-import * as PIXI from "pixi.js";
+import * as PIXI from 'pixi.js';
 import { DropShadowFilter } from 'pixi-filters';
-import { G_Fonts } from "./constants.ts";
-import { TButtonWithShadow } from "./types.ts";
+import { G_Fonts } from './constants.ts';
+import { TButtonWithShadow } from './types.ts';
 
 
 class Utils {
@@ -83,7 +83,7 @@ class Utils {
   };
 
   static assert(condition: boolean, message?: string): asserts condition {
-    if (import.meta.env.VITE_ASSERT && !condition)
+    if (import.meta.env.VITE_DEBUG && !condition)
       throw new Error(message || 'Assertion failed');
   };
 

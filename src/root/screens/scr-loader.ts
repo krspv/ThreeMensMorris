@@ -1,13 +1,13 @@
-import * as PIXI from "pixi.js";
-import HowlerLoaderParser from '../howler-loader-parser.ts';
-import gsap from "gsap";
+import * as PIXI from 'pixi.js';
+import gsap from 'gsap';
 import { PixiPlugin } from 'gsap/PixiPlugin';
-import { Howl } from "howler";
-import ScrHome from "./scr-home.ts";
-import ScrGame from "./scr-game.ts";
-import { IGame, IGameScreen, TButtonWithShadow } from "../types.ts";
-import { G_Fonts, G_Screens, G_Sound, G_Tex } from "../constants.ts";
-import Utils from "../utils.ts";
+import { Howl } from 'howler';
+import HowlerLoaderParser from '../howler-loader-parser.ts';
+import ScrHome from './scr-home.ts';
+import ScrGame from './scr-game.ts';
+import { IGame, IGameScreen, TButtonWithShadow } from '../types.ts';
+import { G_Fonts, G_Screens, G_Sound, G_Tex } from '../constants.ts';
+import Utils from '../utils.ts';
 
 
 class ScrLoader implements IGameScreen {
@@ -109,6 +109,7 @@ class ScrLoader implements IGameScreen {
     PIXI.Assets.add({ alias: G_Sound.PieceDrop, src: 'sound/piece-drop.aac' });
     PIXI.Assets.add({ alias: G_Sound.PieceMove, src: 'sound/piece-move.aac' });
     PIXI.Assets.add({ alias: G_Sound.GameLost, src: 'sound/game-lost.aac' });
+    PIXI.Assets.add({ alias: G_Sound.GameWon, src: 'sound/game-won.aac' });
 
     const allAliases = [G_Tex.Atlas, G_Tex.Dialog, ...Object.values(G_Sound)];
     PIXI.Assets.load(allAliases, this.onProgress);
@@ -137,6 +138,7 @@ class ScrLoader implements IGameScreen {
       this.game.sound[G_Sound.PieceDrop] = PIXI.Assets.get(G_Sound.PieceDrop) as Howl;
       this.game.sound[G_Sound.PieceMove] = PIXI.Assets.get(G_Sound.PieceMove) as Howl;
       this.game.sound[G_Sound.GameLost] = PIXI.Assets.get(G_Sound.GameLost) as Howl;
+      this.game.sound[G_Sound.GameWon] = PIXI.Assets.get(G_Sound.GameWon) as Howl;
 
       // Create the start button
       this.btnStart = Utils.createButton(this.game.atlas.textures[G_Tex.Button], { label: 'Start' });

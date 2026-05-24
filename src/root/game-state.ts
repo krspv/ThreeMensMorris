@@ -55,6 +55,7 @@ class GameState {
 
   public isWinner = (val: Slot): boolean => this.winningPositions.some(pos => pos.every(idx => this.board[idx] === val));
   public getWinnerPositions = (val: Slot): number[] | undefined => this.winningPositions.find(pos => pos.every(idx => this.board[idx] === val));
+  public getWinnerLine = (val: Slot): number => this.winningPositions.findIndex(pos => pos.every(idx => this.board[idx] === val));
 
   public get emptySlotCount(): number {
     return this.board.reduce((acc: number, cur: Slot) => cur === 'Empty' ? acc + 1 : acc, 0);
@@ -97,7 +98,7 @@ class GameState {
             type: 'Placement',
             from: -1,
             to: i,
-            evaluation: nextState.isWinner(actor) ? (actor === 'Cpu' ? 50 : -50) / (depth + 1) : 0,
+            evaluation: nextState.isWinner(actor) ? (actor === 'Cpu' ? 5 : -5) * (depth + 1) : 0,
           };
           ret.push(nextState);
         }
@@ -198,6 +199,8 @@ class GameState {
   };
 
   public randomMove = (): Move => {
+    if (import.meta.env.VITE_DEBUG === 'true')
+      console.info('Random move');
     const children = this.children('Cpu', 1);
     return Utils.randomFrom(children).move!;
   };

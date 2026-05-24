@@ -1,5 +1,5 @@
-import * as PIXI from "pixi.js";
-import { Howl } from "howler";
+import * as PIXI from 'pixi.js';
+import { Howl } from 'howler';
 
 
 interface IGame {

@@ -1,8 +1,8 @@
-import * as PIXI from "pixi.js";
+import * as PIXI from 'pixi.js';
 import gsap from 'gsap';
-import { IGame, IGameScreen, TButtonWithShadow } from "../types.ts";
-import { G_Description, G_Fonts, G_Screens, G_Sound, G_Tex } from "../constants.ts";
-import Utils from "../utils.ts";
+import { IGame, IGameScreen, TButtonWithShadow } from '../types.ts';
+import { G_Description, G_Fonts, G_Screens, G_Sound, G_Tex } from '../constants.ts';
+import Utils from '../utils.ts';
 
 
 type TState = 'ShowingUp' | 'Regular' | 'TransitionToRules' | 'Rules' | 'TransitionFromRules'
@@ -370,23 +370,23 @@ class ScrHome implements IGameScreen {
         .to({}, { duration: .1, ease: 'none', onUpdate: function() {
           const progressLen = Math.floor(this.progress() * G_Description.text02.length);
           self.txtRules02.text = G_Description.text02.substring(0, progressLen);
-        }}, "+=0.1")
+        }}, '+=0.1')
         .to({}, { duration: .1, ease: 'none', onUpdate: function() {
           const progressLen = Math.floor(this.progress() * G_Description.text03.length);
           self.txtRules03.text = G_Description.text03.substring(0, progressLen);
-        }}, "+=0.05")
+        }}, '+=0.05')
         .to({}, { duration: .1, ease: 'none', onUpdate: function() {
           const progressLen = Math.floor(this.progress() * G_Description.text04.length);
           self.txtRules04.text = G_Description.text04.substring(0, progressLen);
-        }}, "+=0.05")
+        }}, '+=0.05')
         .to({}, { duration: .1, ease: 'none', onUpdate: function() {
           const progressLen = Math.floor(this.progress() * G_Description.text05.length);
           self.txtRules05.text = G_Description.text05.substring(0, progressLen);
-        }}, "+=0.05")
+        }}, '+=0.05')
         .to({}, { duration: .1, ease: 'none', onUpdate: function() {
           const progressLen = Math.floor(this.progress() * G_Description.text06.length);
           self.txtRules06.text = G_Description.text06.substring(0, progressLen);
-        }}, "+=0.05")
+        }}, '+=0.05')
         .to(this.btnClose.container, { alpha: 1, scale: .8, duration: .5, ease: 'elastic.out' });
     }
   };
