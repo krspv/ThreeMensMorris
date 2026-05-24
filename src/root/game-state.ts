@@ -39,17 +39,6 @@ class GameState {
     this.board = ['Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty', 'Empty'];
   };
 
-  public cloneMove(): Move {
-    return {
-      type: this.move!.type,
-      from: this.move!.from,
-      to: this.move!.to,
-      evaluation: this.move!.evaluation,
-    };
-  };
-
-  // public getSlot = (row: number, col: number): Slot => this.board[3*row + col];
-  // public setSlot = (row: number, col: number, value: Slot): void => { this.board[3*row + col] = value; };
   public getSlotIdx = (index: number): Slot => this.board[index];
   public setSlotIdx = (index: number, value: Slot): void => { this.board[index] = value; };
 
@@ -167,7 +156,7 @@ class GameState {
       let maxEval: Move = { type: 'Placement', from: -1, to: -1, evaluation: -99 };
       const children = this.children(actor, depth);
 
-      // Optimization: if the table is empty pick one of the corner spots
+      // Optimization: if the table is empty, pick one of the corner spots
       if (children.length === 8 && !children[0].board.some(slot => slot === 'Player')) {
         return { type: 'Placement', from: -1, to: Utils.randomFrom([0, 2, 6, 8]), evaluation: 0 };
       }
@@ -204,7 +193,7 @@ class GameState {
     const children = this.children('Cpu', 1);
     return Utils.randomFrom(children).move!;
   };
-};
+}
 
 
 export type { Slot, Move };
