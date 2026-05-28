@@ -38,7 +38,6 @@ class Game implements IGame {
   };
 
   destroy = () => {
-
   };
 
   handleResize = () => {
