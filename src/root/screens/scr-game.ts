@@ -23,6 +23,7 @@ class ScrGame implements IGameScreen {
   private readonly bTouchDevice: boolean;
   private readonly pieceRadius: number;
   private readonly rcOpponentPieces: PIXI.Rectangle;
+  private listenerController!: AbortController;
   // Game data
   private playerHasFirstMove!: boolean;
   private score: number[] = [0, 0];  // Scores [you, opponent]
@@ -590,14 +591,17 @@ class ScrGame implements IGameScreen {
       .to(this.btnQuit.container, { alpha: .4, duration: .3, ease: 'power2.out' }, .2)
       .to(this.btnQuit.container, { scale: .8, duration: .6, ease: 'power3.out' }, .4);
 
-    document.addEventListener('mousedown', this.onDocMouseDown, { capture: true, passive: true });
-    document.addEventListener('mousemove', this.onDocMouseMove, { capture: true, passive: true });
-    document.addEventListener('mouseup', this.onDocMouseUp, { capture: true, passive: true });
+    this.listenerController = new AbortController();
+    const options = { capture: true, passive: true, signal: this.listenerController.signal };
+
+    document.addEventListener('mousedown', this.onDocMouseDown, options);
+    document.addEventListener('mousemove', this.onDocMouseMove, options);
+    document.addEventListener('mouseup', this.onDocMouseUp, options);
     if (this.bTouchDevice) {
-      document.addEventListener('touchstart', this.onDocTouchStart, { capture: true, passive: true });
-      document.addEventListener('touchmove', this.onDocTouchMove, { capture: true, passive: true });
-      document.addEventListener('touchend', this.onDocTouchEnd, { capture: true, passive: true });
-      document.addEventListener('touchcancel', this.onDocTouchEnd, { capture: true, passive: true });
+      document.addEventListener('touchstart', this.onDocTouchStart, options);
+      document.addEventListener('touchmove', this.onDocTouchMove, options);
+      document.addEventListener('touchend', this.onDocTouchEnd, options);
+      document.addEventListener('touchcancel', this.onDocTouchEnd, options);
     }
   }
 
@@ -800,6 +804,7 @@ class ScrGame implements IGameScreen {
     for (const key of Object.keys(this.gsapTimelines))
       Utils.destroyGsapTimeline(this.gsapTimelines, key);
 
+    this.listenerController.abort();
     this.groupPiecesLow.removeChildren();
     this.groupPiecesHigh.removeChildren();
     this.confettiSystem.destroy();

@@ -19,8 +19,7 @@ class ScrHome implements IGameScreen {
   private bCommonsInitialized: boolean = false;
   private bMusicMuted: boolean = false;
   // Local data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private dynamics: Record<string, any> = {};
+  private gsapTimelines: Record<string, gsap.core.Timeline> = {};
   private state!: TState;
   private readonly mainContainer: PIXI.Container;
   private readonly txtTitle: PIXI.Text;
@@ -262,21 +261,21 @@ class ScrHome implements IGameScreen {
       this.mainContainer.addChild(this.txtTitle);
       this.state = 'ShowingUp';
 
-      this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
+      this.gsapTimelines.tmlShow = gsap.timeline({ onComplete: () => {
           this.state = 'Regular';
-          Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
+          Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShow');
           this.btnRules.state.disabled = false;
           this.btnPlay.state.disabled = false;
           if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
             this.game.setScreen(G_Screens.Game);
       }});
-      this.dynamics.tmlShow.to(this.txtTitle, { alpha: 1, duration: 1.7, ease: 'power2.out' });
-      this.dynamics.tmlShow.to(this.btnRules.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .5);
-      this.dynamics.tmlShow.to(this.btnRules.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .5);
-      this.dynamics.tmlShow.to(this.btnPlay.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .75);
-      this.dynamics.tmlShow.to(this.btnPlay.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .75);
+      this.gsapTimelines.tmlShow.to(this.txtTitle, { alpha: 1, duration: 1.7, ease: 'power2.out' });
+      this.gsapTimelines.tmlShow.to(this.btnRules.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .5);
+      this.gsapTimelines.tmlShow.to(this.btnRules.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .5);
+      this.gsapTimelines.tmlShow.to(this.btnPlay.container, { alpha: 1, duration: .8, ease: 'power2.out' }, .75);
+      this.gsapTimelines.tmlShow.to(this.btnPlay.container, { scale: 1, duration: 1.5, ease: 'elastic.out' }, .75);
       if (import.meta.env.VITE_STRAIGHT_TO_GAME === 'true')
-        this.dynamics.tmlShow.timeScale(10);
+        this.gsapTimelines.tmlShow.timeScale(10);
     } else {
       const { height } = this.game.app.screen;
       this.game.app.stage.addChild(this.mainContainer);
@@ -297,8 +296,8 @@ class ScrHome implements IGameScreen {
       this.mainContainer.addChild(this.txtTitle);
       this.state = 'ShowingUp';
 
-      this.dynamics.tmlShow = gsap.timeline({ onComplete: () => {
-          Utils.destroyGsapTimeline(this.dynamics, 'tmlShow');
+      this.gsapTimelines.tmlShow = gsap.timeline({ onComplete: () => {
+          Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlShow');
 
           this.state = 'Regular';
           this.btnRules.state.disabled = false;
@@ -314,8 +313,8 @@ class ScrHome implements IGameScreen {
   }
 
   onDismiss(): void {
-    for (const key of Object.keys(this.dynamics))
-      Utils.destroyGsapTimeline(this.dynamics, key);
+    for (const key of Object.keys(this.gsapTimelines))
+      Utils.destroyGsapTimeline(this.gsapTimelines, key);
 
     this.mainContainer.removeChildren();
     this.game.app.stage.removeChild(this.mainContainer);
@@ -369,10 +368,10 @@ class ScrHome implements IGameScreen {
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       const self = this;
 
-      this.dynamics.tmlToRules = gsap.timeline({ onComplete: () => {
+      this.gsapTimelines.tmlToRules = gsap.timeline({ onComplete: () => {
         this.state = 'Rules';
         this.btnClose.state.disabled = false;
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlToRules');
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToRules');
       }})
         .to(this.txtTitle, { y: -80, duration: .8, delay: .15, ease: 'power2.inout' })
         .to(this.btnRules.container, { y: (0.5 + 1) * height, duration: .75, ease: 'power2.inout' }, .2)
@@ -436,9 +435,9 @@ class ScrHome implements IGameScreen {
       this.groupDialog.scale.set(0.01);
       this.groupDialog.visible = true;
 
-      this.dynamics.tmlToDlg = gsap.timeline({ onComplete: () => {
+      this.gsapTimelines.tmlToDlg = gsap.timeline({ onComplete: () => {
           this.state = 'DifficultyDialog';
-          Utils.destroyGsapTimeline(this.dynamics, 'tmlToDlg');
+          Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToDlg');
           this.btnEasyDfclt.state.disabled = false;
           this.btnMediumDfclt.state.disabled = false;
           this.btnHardDfclt.state.disabled = false;
@@ -460,9 +459,9 @@ class ScrHome implements IGameScreen {
 
       const { height } = this.game.app.screen;
 
-      this.dynamics.tmlFromRules = gsap.timeline({ onComplete: () => {
+      this.gsapTimelines.tmlFromRules = gsap.timeline({ onComplete: () => {
         this.state = 'Regular';
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlFromRules');
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlFromRules');
         this.mainContainer.removeChild(this.sprPirate);
         this.mainContainer.removeChild(this.groupHelpBubble);
         this.btnRules.state.disabled = false;
@@ -486,9 +485,9 @@ class ScrHome implements IGameScreen {
       this.btnPlay.container.visible = true;
       this.btnRules.container.visible = true;
 
-      this.dynamics.tmlCancelDlg = gsap.timeline({ onComplete: () => {
+      this.gsapTimelines.tmlCancelDlg = gsap.timeline({ onComplete: () => {
         this.state = 'Regular';
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlCancelDlg');
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlCancelDlg');
         this.btnPlay.state.disabled = false;
         this.btnRules.state.disabled = false;
         this.btnBack.container.visible = false;
@@ -527,9 +526,9 @@ class ScrHome implements IGameScreen {
   private transitionToGame = () => {
     this.mainContainer.removeChild(this.btnPlay.container, this.btnRules.container);
 
-    this.dynamics.tmlToGame = gsap.timeline({ onComplete: () => {
+    this.gsapTimelines.tmlToGame = gsap.timeline({ onComplete: () => {
         this.state = 'Regular';
-        Utils.destroyGsapTimeline(this.dynamics, 'tmlToGame');
+        Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToGame');
         this.game.setScreen(G_Screens.Game);
       }})
       .to(this.groupDialog.scale, { x: 0.01, y: 0.01, duration: .5, ease: 'power2.in' })

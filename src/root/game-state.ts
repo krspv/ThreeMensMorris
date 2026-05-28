@@ -99,7 +99,7 @@ class GameState {
             type: 'Movement',
             from: idx,
             to: moveFn(nextState)(idx),
-            evaluation: nextState.isWinner(actor) ? (actor === 'Cpu' ? 50 : -50) / (depth + 1) : 0,
+            evaluation: nextState.isWinner(actor) ? (actor === 'Cpu' ? 5 : -5) * (depth + 1) : 0,
           };
           ret.push(nextState);
         }

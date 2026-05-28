@@ -4,7 +4,7 @@ import { G_BaseSize } from './constants.ts';
 import Utils from './utils.ts';
 
 
-const Tints = ['0xFF0000', '0x00FF00', '0x0000FF', '0xFF00FF', '0xFFFF00', '0xFF8800', '0x00FFFF'];
+const Tints = [0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0xFFFF00, 0xFF8800, 0x00FFFF];
 const TotalConfetti = 300;
 
 class ConfettiParticle {
