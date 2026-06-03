@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { GlowFilter, DropShadowFilter } from 'pixi-filters';
+import { Howler } from 'howler';
 import gsap from 'gsap';
 import GameState, { Move } from '../game-state.ts';
 import ConfettiSystem from '../confetti-system.ts';
@@ -8,6 +9,7 @@ import { G_Fonts, G_Screens, G_Sound, G_Tex } from '../constants.ts';
 import Utils from '../utils.ts';
 
 
+const AD_FREQ = 6;
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
 const DROP_DISTSQ = 2_900;
@@ -24,6 +26,8 @@ class ScrGame implements IGameScreen {
   private readonly pieceRadius: number;
   private readonly rcOpponentPieces: PIXI.Rectangle;
   private listenerController!: AbortController;
+  private gamesCount: number = 0;
+  private bDuringAd: boolean = false;
   // Game data
   private playerHasFirstMove!: boolean;
   private score: number[] = [0, 0];  // Scores [you, opponent]
@@ -483,7 +487,25 @@ class ScrGame implements IGameScreen {
     return ret;
   };
 
+  private registerListeners = () => {
+    this.listenerController = new AbortController();
+
+    const options = { capture: true, passive: true, signal: this.listenerController.signal };
+
+    document.addEventListener('mousedown', this.onDocMouseDown, options);
+    document.addEventListener('mousemove', this.onDocMouseMove, options);
+    document.addEventListener('mouseup', this.onDocMouseUp, options);
+    if (this.bTouchDevice) {
+      document.addEventListener('touchstart', this.onDocTouchStart, options);
+      document.addEventListener('touchmove', this.onDocTouchMove, options);
+      document.addEventListener('touchend', this.onDocTouchEnd, options);
+      document.addEventListener('touchcancel', this.onDocTouchEnd, options);
+    }
+  };
+
   onStage(): void {
+    window.CrazyGames?.SDK.game.gameplayStart();
+
     this.mainContainer.position.set(0, 0);
     this.lines.forEach(line => line.tint = 0xFFFFFF);
     this.pieceSprites.forEach(piece => piece.filters = []);
@@ -591,18 +613,7 @@ class ScrGame implements IGameScreen {
       .to(this.btnQuit.container, { alpha: .4, duration: .3, ease: 'power2.out' }, .2)
       .to(this.btnQuit.container, { scale: .8, duration: .6, ease: 'power3.out' }, .4);
 
-    this.listenerController = new AbortController();
-    const options = { capture: true, passive: true, signal: this.listenerController.signal };
-
-    document.addEventListener('mousedown', this.onDocMouseDown, options);
-    document.addEventListener('mousemove', this.onDocMouseMove, options);
-    document.addEventListener('mouseup', this.onDocMouseUp, options);
-    if (this.bTouchDevice) {
-      document.addEventListener('touchstart', this.onDocTouchStart, options);
-      document.addEventListener('touchmove', this.onDocTouchMove, options);
-      document.addEventListener('touchend', this.onDocTouchEnd, options);
-      document.addEventListener('touchcancel', this.onDocTouchEnd, options);
-    }
+    this.registerListeners();
   }
 
   onUpdate(ticker: PIXI.Ticker): void {
@@ -626,7 +637,7 @@ class ScrGame implements IGameScreen {
     }
 
     let deltaAlpha: number;
-    if (this.state === 'Playing' && this.subState === 'Idle' && !this.placedPieces[5] && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y))
+    if (this.state === 'Playing' && this.subState === 'Idle' && !this.placedPieces[5] && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y) && !this.bDuringAd)
       deltaAlpha = ticker.elapsedMS * 0.001;
     else
       deltaAlpha = -ticker.elapsedMS * 0.003;
@@ -768,6 +779,8 @@ class ScrGame implements IGameScreen {
         txtScore = this.txtScoreYou;
         // Fire confetti
         this.confettiSystem.fire();
+        if (this.score[0] > 0 && this.score[0] % 10 === 0)  // Happy time every 10th won game
+          window.CrazyGames?.SDK.game.happytime();
 
         sprPirate = this.happyPirate;
 
@@ -801,6 +814,8 @@ class ScrGame implements IGameScreen {
   }
 
   onDismiss(): void {
+    window.CrazyGames?.SDK.game.gameplayStop();
+
     for (const key of Object.keys(this.gsapTimelines))
       Utils.destroyGsapTimeline(this.gsapTimelines, key);
 
@@ -862,6 +877,7 @@ class ScrGame implements IGameScreen {
   };
 
   private onBtnQuitClick = () => {
+    if (this.bDuringAd) return;
     if (this.state === 'Playing' || this.state === 'Winner') {
       // Split the stage
       for (const key of Object.keys(this.gsapTimelines))
@@ -885,6 +901,7 @@ class ScrGame implements IGameScreen {
   };
 
   private onBtnPlayAgainClick = () => {
+    if (this.bDuringAd) return;
     if (this.state === 'Winner') {
       Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToWinner'); // In case it's still running
 
@@ -914,6 +931,36 @@ class ScrGame implements IGameScreen {
         const targetPos = this.calcPlayerPieceStartPos(i % 3);
         if (i > 2) targetPos.y += 250;
         this.gsapTimelines.tmlPlayAgain.to(this.pieceSprites[i].position, { x: targetPos.x, y: targetPos.y, duration: 0.5, ease: 'power2.out' }, i*0.1);
+      }
+
+      if (import.meta.env.VITE_DISABLE_ADS !== 'true' && this.gamesCount >= AD_FREQ) {
+        const callbacks = {
+          adFinished: () => {
+            if (import.meta.env.VITE_DEBUG === 'true')
+              console.info('End midgame ad');
+            Howler.mute(false);
+            this.bDuringAd = false;
+            this.registerListeners();
+          },
+          adError: (error: unknown) => {
+            if (import.meta.env.VITE_DEBUG === 'true')
+              console.error('Error midgame ad', error);
+            Howler.mute(false);
+            this.bDuringAd = false;
+            this.registerListeners();
+            this.gamesCount = AD_FREQ;
+          },
+          adStarted: () => {
+            if (import.meta.env.VITE_DEBUG === 'true')
+              console.info('Start midgame ad');
+            this.mousePos.set(0, 0);
+            this.gamesCount = 0;
+            Howler.mute(true);
+            this.bDuringAd = true;
+            this.listenerController.abort();
+          },
+        };
+        window.CrazyGames?.SDK.ad.requestAd('midgame', callbacks);
       }
     }
   };
@@ -1139,6 +1186,7 @@ class ScrGame implements IGameScreen {
       this.winner = lastMoveActor;
       this.subState = 'Init_To_Winner';
       this.bCanFadePiecesGroup = true;
+      this.gamesCount++;
     } else {
       if (lastMoveActor === 'Cpu' && this.bAllPiecesPlaced)
         this.determineAvailableMovesForActor('Player');

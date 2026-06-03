@@ -19,7 +19,8 @@ class Game implements IGame {
     this.app = app;
   }
 
-  init = () => {
+  init = async () => {
+    await window.CrazyGames?.SDK.init();
   };
 
   run = () => {
