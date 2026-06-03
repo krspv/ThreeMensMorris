@@ -20,7 +20,8 @@ class Game implements IGame {
   }
 
   init = async () => {
-    await window.CrazyGames?.SDK.init();
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+      await window.CrazyGames?.SDK.init();
   };
 
   run = () => {

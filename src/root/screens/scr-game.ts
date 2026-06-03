@@ -504,7 +504,8 @@ class ScrGame implements IGameScreen {
   };
 
   onStage(): void {
-    window.CrazyGames?.SDK.game.gameplayStart();
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+      window.CrazyGames?.SDK.game.gameplayStart();
 
     this.mainContainer.position.set(0, 0);
     this.lines.forEach(line => line.tint = 0xFFFFFF);
@@ -779,7 +780,7 @@ class ScrGame implements IGameScreen {
         txtScore = this.txtScoreYou;
         // Fire confetti
         this.confettiSystem.fire();
-        if (this.score[0] > 0 && this.score[0] % 10 === 0)  // Happy time every 10th won game
+        if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true' && this.score[0] > 0 && this.score[0] % 10 === 0)  // Happy time every 10th won game
           window.CrazyGames?.SDK.game.happytime();
 
         sprPirate = this.happyPirate;
@@ -814,7 +815,8 @@ class ScrGame implements IGameScreen {
   }
 
   onDismiss(): void {
-    window.CrazyGames?.SDK.game.gameplayStop();
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+      window.CrazyGames?.SDK.game.gameplayStop();
 
     for (const key of Object.keys(this.gsapTimelines))
       Utils.destroyGsapTimeline(this.gsapTimelines, key);
@@ -933,7 +935,7 @@ class ScrGame implements IGameScreen {
         this.gsapTimelines.tmlPlayAgain.to(this.pieceSprites[i].position, { x: targetPos.x, y: targetPos.y, duration: 0.5, ease: 'power2.out' }, i*0.1);
       }
 
-      if (import.meta.env.VITE_DISABLE_ADS !== 'true' && this.gamesCount >= AD_FREQ) {
+      if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true' && this.gamesCount >= AD_FREQ) {
         const callbacks = {
           adFinished: () => {
             if (import.meta.env.VITE_DEBUG === 'true')
