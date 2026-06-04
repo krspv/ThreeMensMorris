@@ -1,3 +1,7 @@
+interface CrazyGamesGameSettings {
+  muteAudio: boolean;
+}
+
 interface CrazyGamesSDK {
   init(): Promise<void>;
   ad: {
@@ -14,6 +18,9 @@ interface CrazyGamesSDK {
     loadingStart(): void;
     loadingStop(): void;
     happytime(): void;
+    settings: CrazyGamesGameSettings;
+    addSettingsChangeListener: (listener: (newSettings: CrazyGamesGameSettings) => void) => void;
+    removeSettingsChangeListener: (listener: (newSettings: CrazyGamesGameSettings) => void) => void;
   };
 }
 

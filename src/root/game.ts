@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { Howl } from 'howler';
+import { Howl, Howler } from 'howler';
 import { IGame, IGameScreen } from './types.ts';
 import ScrLoader from './screens/scr-loader.ts';
 import { G_Screens } from './constants.ts';
@@ -20,8 +20,12 @@ class Game implements IGame {
   }
 
   init = async () => {
-    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true') {
       await window.CrazyGames?.SDK.init();
+      window.CrazyGames?.SDK.game.addSettingsChangeListener(this.onCrazyGamesSettingsChange);
+      if (window.CrazyGames?.SDK.game.settings.muteAudio) // Handle initial mute
+        Howler.mute(true);
+    }
   };
 
   run = () => {
@@ -40,6 +44,8 @@ class Game implements IGame {
   };
 
   destroy = () => {
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+      window.CrazyGames?.SDK.game.removeSettingsChangeListener(this.onCrazyGamesSettingsChange);
   };
 
   handleResize = () => {
@@ -54,6 +60,14 @@ class Game implements IGame {
     this.curScreen = this.screens[idx];
 
     this.curScreen.onStage();
+  };
+
+  private onCrazyGamesSettingsChange = (newSettings: CrazyGamesGameSettings) => {
+    if (newSettings.muteAudio) {
+      Howler.mute(true);
+    } else {
+      Howler.mute(false);
+    }
   };
 }
 

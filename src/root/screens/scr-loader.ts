@@ -92,11 +92,16 @@ class ScrLoader implements IGameScreen {
 
   private onProgress = (progress: number) => {
     this.setProgressMask(progress);
-    if (progress >= 1)
+    if (progress >= 1 && this.loadState === 0) {
       this.loadState = 1;
+      if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+        window.CrazyGames?.SDK.game.loadingStop();
+    }
   };
 
   onStage = () => {
+    if (import.meta.env.VITE_DISABLE_CRAZYGAMES_SDK !== 'true')
+      window.CrazyGames?.SDK.game.loadingStart();
     const { stage } = this.game.app;
     stage.addChild(this.txt1);
     stage.addChild(this.progressBar);

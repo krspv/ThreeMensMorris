@@ -48,13 +48,14 @@ const GameInstance = () => {
     if (!app) return;
 
     const game = new Game(app);
-    game.init();
-    game.run();
+    let cancelled = false;  // Guarding against component unmount while game.init() is still running
+    game.init().then(() => { if (!cancelled) game.run(); });
 
     const onResize = () => { game.handleResize(); };
     window.addEventListener('resize', onResize);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('resize', onResize);
       game.destroy();
     };
