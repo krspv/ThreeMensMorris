@@ -12,7 +12,7 @@ import Utils from '../utils.ts';
 const AD_FREQ = 6;
 const BOARD_SCALE = 0.85;
 const PIECE_SCALE = 0.36;
-const DROP_DISTSQ = 2_900;
+const DROP_DISTSQ = 6_700;
 const MOVE_DISTSQ = 15_000;
 type TState = 'ShowingUp' | 'Playing' | 'To_Winner' | 'Winner' | 'To_Playing' | 'Quitting';
 type TSubState = 'Idle' | 'Dragging_Piece' | 'Moving_Piece' | 'CpuMove' | 'CpuMove_Animation' | 'Init_To_Winner';
@@ -27,7 +27,6 @@ class ScrGame implements IGameScreen {
   private readonly rcOpponentPieces: PIXI.Rectangle;
   private listenerController!: AbortController;
   private gamesCount: number = 0;
-  private bDuringAd: boolean = false;
   // Game data
   private playerHasFirstMove!: boolean;
   private score: number[] = [0, 0];  // Scores [you, opponent]
@@ -638,7 +637,7 @@ class ScrGame implements IGameScreen {
     }
 
     let deltaAlpha: number;
-    if (this.state === 'Playing' && this.subState === 'Idle' && !this.placedPieces[5] && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y) && !this.bDuringAd)
+    if (this.state === 'Playing' && this.subState === 'Idle' && !this.placedPieces[5] && this.rcOpponentPieces.contains(this.mousePos.x, this.mousePos.y) && !this.game.isAdActive)
       deltaAlpha = ticker.elapsedMS * 0.001;
     else
       deltaAlpha = -ticker.elapsedMS * 0.003;
@@ -879,7 +878,7 @@ class ScrGame implements IGameScreen {
   };
 
   private onBtnQuitClick = () => {
-    if (this.bDuringAd) return;
+    if (this.game.isAdActive) return;
     if (this.state === 'Playing' || this.state === 'Winner') {
       // Split the stage
       for (const key of Object.keys(this.gsapTimelines))
@@ -903,7 +902,7 @@ class ScrGame implements IGameScreen {
   };
 
   private onBtnPlayAgainClick = () => {
-    if (this.bDuringAd) return;
+    if (this.game.isAdActive) return;
     if (this.state === 'Winner') {
       Utils.destroyGsapTimeline(this.gsapTimelines, 'tmlToWinner'); // In case it's still running
 
@@ -940,15 +939,17 @@ class ScrGame implements IGameScreen {
           adFinished: () => {
             if (import.meta.env.VITE_DEBUG === 'true')
               console.info('End midgame ad');
-            Howler.mute(false);
-            this.bDuringAd = false;
+            if (!window.CrazyGames?.SDK.game.settings.muteAudio)
+              Howler.mute(false);
+            this.game.isAdActive = false;
             this.registerListeners();
           },
           adError: (error: unknown) => {
             if (import.meta.env.VITE_DEBUG === 'true')
               console.error('Error midgame ad', error);
-            Howler.mute(false);
-            this.bDuringAd = false;
+            if (!window.CrazyGames?.SDK.game.settings.muteAudio)
+              Howler.mute(false);
+            this.game.isAdActive = false;
             this.registerListeners();
             this.gamesCount = AD_FREQ;
           },
@@ -958,7 +959,7 @@ class ScrGame implements IGameScreen {
             this.mousePos.set(0, 0);
             this.gamesCount = 0;
             Howler.mute(true);
-            this.bDuringAd = true;
+            this.game.isAdActive = true;
             this.listenerController.abort();
           },
         };
@@ -1241,7 +1242,7 @@ class ScrGame implements IGameScreen {
         minimaxDepth = 5;
         break;
       case 'Hard':
-        bMakeRandomMove = Math.random() < .001;
+        bMakeRandomMove = Math.random() < .023;
         minimaxDepth = 9;
         break;
     }

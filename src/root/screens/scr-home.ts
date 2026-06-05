@@ -501,6 +501,7 @@ class ScrHome implements IGameScreen {
 
   private onBtnEasyClick = () => {
     if (this.state === 'DifficultyDialog') {
+      console.log('easy click');
       this.game.sound[G_Sound.ButtonClick].play();
       this.game.difficulty = 'Easy';
       this.transitionToGame();
@@ -524,6 +525,10 @@ class ScrHome implements IGameScreen {
   };
 
   private transitionToGame = () => {
+    this.state = 'TransitionFromDifficultyDialogToGame';
+    this.btnEasyDfclt.state.disabled = true;
+    this.btnMediumDfclt.state.disabled = true;
+    this.btnHardDfclt.state.disabled = true;
     this.mainContainer.removeChild(this.btnPlay.container, this.btnRules.container);
 
     this.gsapTimelines.tmlToGame = gsap.timeline({ onComplete: () => {

@@ -10,6 +10,7 @@ interface IGame {
   screens: IGameScreen[];
   curScreen: IGameScreen | null;
   difficulty: 'Easy' | 'Medium' | 'Hard';
+  isAdActive: boolean;
 
   init(): void;
   run(): void;

@@ -14,6 +14,7 @@ class Game implements IGame {
   screens!: IGameScreen[];
   curScreen: IGameScreen | null = null;
   difficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy';
+  isAdActive: boolean = false;
 
   constructor(app: PIXI.Application) {
     this.app = app;
@@ -63,6 +64,8 @@ class Game implements IGame {
   };
 
   private onCrazyGamesSettingsChange = (newSettings: CrazyGamesGameSettings) => {
+    if (this.isAdActive) return;
+
     if (newSettings.muteAudio) {
       Howler.mute(true);
     } else {
